@@ -116,24 +116,26 @@ ggplot(res_topreg, aes(x = GEOSET, y = reorder(symbol, value), fill=value)) +   
 
 
 ####################################################################
-#Select genes with p<0.05, logFC>abs(0.5) and regulated >2 <GEOSETs
+#Select genes with p<0.005, logFC>abs(0.2) and regulated >2 <GEOSETs
 ####################################################################
 
 #Filter top regulated genes
-top_mul<-df_results%>%dplyr::filter(GEOSET%in%young_offspring)%>%
-  dplyr::filter(P.Value<=0.05)%>% #Filter out genes with a p-value above 0.05
-  dplyr::filter(abs(logFC)>=0.8)
-top_mul<-table(top_mul$symbol)%>%
-  data.frame()%>%arrange(desc(Freq))%>%
-  dplyr::filter(Freq>1)
-vec_mul<-  as.character(top_mul$Var1)
+vec_mul<-
+  df_results%>%dplyr::filter(GEOSET!=c("GSE133767"))%>% #Filter out dataset from embryo data
+  dplyr::filter(P.Value<=0.005)%>% #Filter out genes with a p-value above 0.05
+  dplyr::filter(abs(logFC)>=0.2)%>%
+  mutate(dir_up=case_when(logFC>0~1, logFC<0~0, TRUE~0))%>%
+  mutate(dir_dn=case_when(logFC>0~0, logFC<0~1, TRUE~0))%>%
+  group_by(symbol)%>%summarise(cons_up=sum(dir_up), cons_dn=sum(dir_dn), sum_logFC=sum(logFC))%>%
+  dplyr::filter(cons_up>=3|cons_dn>=3)%>% dplyr::filter(abs(sum_logFC)>=1)%>%
+  pull(symbol)
 
 #prepare Data for graph with above function
-res_mul<-prep_melt(vec_mul)%>%dplyr::filter(GEOSET%in%young_offspring)
+res_mul<-prep_melt(vec_mul)%>%dplyr::filter(GEOSET!="GSE133767")
 
 #Plot data with geom_tile function, facet grid according to species)
 ggplot(res_mul, aes(x = GEOSET, y = reorder(symbol, value), fill=value)) +   #reorder variables according to values
-  scale_fill_continuous_divergingx(palette="RdBu", limits=c(-6,6), rev=TRUE, mid = 0, l3 = 0, p1 = .2, p2 = .6, p3=0.6, p4=0.8) +
+  scale_fill_continuous_divergingx(palette="RdBu", limits=c(-2,2), rev=TRUE, mid = 0, l3 = 0, p1 = .2, p2 = .6, p3=0.6, p4=0.8) +
   labs(title="Genes of interest Expression Matrix")+
   tile_ggplot+ theme_Publication()
 
@@ -175,6 +177,7 @@ ggplot(res_cons, aes(x = GEOSET, y = reorder(symbol, value), fill=value)) +   #r
 #Select genes that are regulated in the same direction in >=4 GEOSETS
 #plus selected on a sum of the logFC combined between all samples
 #####################################################################
+
 #Filter top regulated genes, tailored to include interesting candidates such as Fgf21
 vec_cons_genes2<-
   df_results%>%dplyr::filter(GEOSET%in%adult_offspring)%>% #Filter out dataset from embryo data
