@@ -44,7 +44,7 @@ theme_Publication <- function(base_size=14, base_family="sans") {
   library(ggthemes)
   (theme_foundation(base_size=base_size, base_family=base_family)
     + theme(plot.title = element_text(face = "bold",
-                                      size = rel(1.2), hjust = 0.5, margin = margin(0,0,20,0)),
+            size = rel(1.2), hjust = 0.5, margin = margin(0,0,20,0)),
             text = element_text(),
             panel.background = element_rect(colour = NA),
             plot.background = element_rect(colour = NA),
@@ -69,7 +69,6 @@ theme_Publication <- function(base_size=14, base_family="sans") {
             strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
             strip.text = element_text(face="bold")
     ))
-  
 }
 
 scale_fill_Publication <- function(...){

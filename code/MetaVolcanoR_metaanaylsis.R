@@ -6,6 +6,10 @@
 
 library(MetaVolcanoR)
 
+#Import dataframe
+df_results<-read.csv("df_results.csv")
+list_results<-split(df_results, f=df_results$GEOSET)
+
 #browseVignettes("MetaVolcanoR")
 
 head(list_results[[9]])
