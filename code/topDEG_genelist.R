@@ -8,9 +8,9 @@ lapply(c("tidyverse", "RColorBrewer", "reshape", "data.table", "colorspace", "re
 mycolors<-c(brewer.pal(11, "RdBu"))
 mycolors<-rev(mycolors)
 
-###########################-
-#Plot structure & functions
-###########################
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
+#Plot structure & functions####
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 
 prep_melt<-function(gene_list){
   #Select only genes of interest from the whole dataset
@@ -58,6 +58,10 @@ theme_Publication <- function(base_size=14, base_family="sans") {
     ))
   
 }
+
+#*#*#*#*#*#*#*#*#*#*#*#*
+#Import base dataset####
+#*#*#*#*#*#*#*#*#*#*#*#*
 
 #Import file containing all values for all analysed datasets
 df_results<-read.csv("df_results.csv")
@@ -147,7 +151,7 @@ ggplot(res_top_DEG, aes(x = GEOSET, y = reorder(symbol, value), fill=value)) +  
 
 #Only plot genes with relevant pathway information 
 #Genes contained in the top_DEG_anno_cleaned dataframe
-vec_top_DEG_path<-top_DEG_annocleaned%>%
+vec_top_DEG_path<-top_DEG_anno_cleaned%>%
   pull(symbol)
 
 #prepare Data for graph
