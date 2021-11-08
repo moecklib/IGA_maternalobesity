@@ -2,7 +2,8 @@
 #NOVEMBER 2021, BEAT MOECKLI, JULIEN PRADOS
 
 #loading necessary packages
-lapply(c("tidyverse", "RColorBrewer", "reshape", "data.table", "colorspace", "readxl", "EnsDb.Mmusculus.v79"), require, character.only = TRUE)
+lapply(c("tidyverse", "RColorBrewer", "reshape", "data.table", "colorspace", "readxl", "EnsDb.Mmusculus.v79",
+         "clusterProfiler"), require, character.only = TRUE)
 
 mycolors<-c(brewer.pal(11, "RdBu"))
 mycolors<-rev(mycolors)
@@ -61,14 +62,16 @@ theme_Publication <- function(base_size=14, base_family="sans") {
 #Import file containing all values for all analysed datasets
 df_results<-read.csv("df_results.csv")
 
+#Remove datasets with fetal or blastcyst samples
 df_results<-read.csv("df_results.csv")%>%
   dplyr::filter(!GEOSET%in%c("GSE133767", "GSE62715")) #Filter datasets from fetal and blastocyst offspring
 
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 #Perform the selection of genes according to the below steps####
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
+top_DEG<-local({
 
-#1. Define selection criteria for the datasets
+  #1. Define selection criteria for the datasets
 thrLFC<-  0.1
 thrpVal<- 0.05
 
@@ -92,18 +95,20 @@ top_DEG<-top_DEGpreP%>%group_by(symbol)%>%
   dplyr::filter(cons_up>=3 |cons_dn>=3)%>%
   dplyr::filter(abs(sum_logFC)>=1)%>%
   arrange(desc(cons_up, abs(cons_dn), FDR_comb, sum_logFC))
+})
 
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 #Add pathway information to genelist####
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 
+top_DEG_annocleaned<-local({
 #Get the wikipathways annotation file
 wp2gene<-read.gmt.wp("data/wikipathways-20210610-gmt-Mus_musculus.gmt")
 
-
 #obtain a list with gene names and EntrezID, command "columns(EnsDb.Mmusculus.v79)" shows available colnames
 #Possibility to add entrez ID to gene names
-gene_names<-select(EnsDb.Mmusculus.v79, keys(EnsDb.Mmusculus.v79), c("ENTREZID", "GENENAME"))
+gene_names<-AnnotationDbi::select(EnsDb.Mmusculus.v79, keys(EnsDb.Mmusculus.v79), 
+                                  columns=c("ENTREZID", "GENENAME"))
 
 top_DEG$entrezID<-gene_names$ENTREZID[match(top_DEG$symbol, gene_names$GENENAME)] #Add additional variable with EntrezID
 top_DEG$entrezID<-as.character(top_DEG$entrezID)    #change EntrezID to character variable for left_join
@@ -115,7 +120,13 @@ top_DEG_anno<-top_DEG%>%left_join(wp2gene%>%dplyr::select(name, gene),
   summarize(pathway=paste(name, collapse = ", "))
 
 #Filter all rows with no pathway attributed
-top_DEG_anno_cleaned<-top_DEG_anno%>%dplyr::filter(pathway!="NA")
+top_DEG_annocleaned<-top_DEG_anno%>%dplyr::filter(pathway!="NA")%>%
+  mutate(sum_cons=cons_up+cons_dn, .after=cons_dn)%>%
+  arrange(desc(sum_cons), FDR_comb, Fisher_P.Val)
+})
+
+#Write the results file to the output folder
+#write.csv(top_DEG_annocleaned, file="output/TopDE_Genes.csv")
 
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 #Visualisations of top dereg genes####
@@ -123,27 +134,27 @@ top_DEG_anno_cleaned<-top_DEG_anno%>%dplyr::filter(pathway!="NA")
 
 #Filter top regulated genes identified according to the below criteria 
 #(logFC>0.1, P.Val<0.05, sumLogFC>1, more than 3 conditions)
-vec_topDEG<-top_DEG%>%pull(symbol)
+vec_top_DEG<-top_DEG%>%pull(symbol)
 
 #prepare Data for graph
-res_topDEG<-prep_melt(vec_topDEG)
+res_top_DEG<-prep_melt(vec_top_DEG)
 
 #Plot data with geom_tile function, facet grid according to species)
-ggplot(res_topDEG, aes(x = GEOSET, y = reorder(symbol, value), fill=value)) +   #reorder variables according to values
+ggplot(res_top_DEG, aes(x = GEOSET, y = reorder(symbol, value), fill=value)) +   #reorder variables according to values
   scale_fill_continuous_divergingx(palette="RdBu", limits=c(-2,2), rev=TRUE, mid = 0, l3 = 0, p1 = .2, p2 = .6, p3=0.6, p4=0.8) +
   labs(title="Genes of interest Expression Matrix")+
   tile_ggplot+theme_Publication()
 
-#Filter top regulated genes identified according to the below criteria 
-#(logFC>0.1, P.Val<0.05, sumLogFC>1, more than 4 conditions)
-vec_topDEG4<-top_DEG%>%dplyr::filter(cons_up>=4 |cons_dn>=4)%>%
+#Only plot genes with relevant pathway information 
+#Genes contained in the top_DEG_anno_cleaned dataframe
+vec_top_DEG_path<-top_DEG_annocleaned%>%
   pull(symbol)
 
 #prepare Data for graph
-res_topDEG4<-prep_melt(vec_topDEG4)
+res_top_DEG_path<-prep_melt(vec_top_DEG_path)
 
 #Plot data with geom_tile function, facet grid according to species)
-ggplot(res_topDEG4, aes(x = GEOSET, y = reorder(symbol, value), fill=value)) +   #reorder variables according to values
+ggplot(res_top_DEG_path, aes(x = GEOSET, y = reorder(symbol, value), fill=value)) +   #reorder variables according to values
   scale_fill_continuous_divergingx(palette="RdBu", limits=c(-2,2), rev=TRUE, mid = 0, l3 = 0, p1 = .2, p2 = .6, p3=0.6, p4=0.8) +
   labs(title="Genes of interest Expression Matrix")+
   tile_ggplot+theme_Publication()
