@@ -44,9 +44,15 @@ cleanup_results<-function(full_results){
     slice_head(n = 1)  #select top signal probe for each gene
 }
 
-#GSE133767####
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
+##Load all individual datasets into functions####
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 
-list_results<-local({
+#*#*#*#*#*
+#GSE133767
+#*#*#*#*#*
+
+GSE133767<-function(){
   #Download expression dataset
   gse_133767 <- getGEO(filename = "data/GSE133767_series_matrix.txt.gz")
   
@@ -138,15 +144,16 @@ list_results<-local({
   })
   
   #Create a list with the result files
-  list_results<-list(GSE133767=results_133767)
-})
-
+  GSE133767<-list(GSE133767=results_133767)
+}
 
 #**********************************
 
-#GSE40903_CCvsOC&GSE40903_OOvsCO####
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
+#GSE40903_CCvsOC&GSE40903_OOvsCO
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 
-list_results<-local({
+GSE40903<-function(){
   
   #Download expression dataset
   gse_40903 <- getGEO(filename = "data/GSE40903_series_matrix.txt.gz")
@@ -234,13 +241,17 @@ list_results<-local({
   })
   
   #Create a list with the TWO new result files
-  list_results<-c(list_results, GSE40903_CCvsOC=list(results_40903_CCvsOC), 
-                  GSE40903_COvsOO=list(results_40903_COvsOO) )
-})
+  GSE40903<-list(GSE40903_CCvsOC=results_40903_CCvsOC, 
+                  GSE40903_COvsOO=results_40903_COvsOO)
+}
 
-#GSE123009_12w####
+#**********************************
 
-list_results<-local({
+#*#*#*#*#*#*#*
+#GSE123009_12w
+#*#*#*#*#*#*#*
+
+GSE123009_12w<-function(){
   #Download expression dataset
   gse_123009 <- getGEO(filename = "data/GSE123009_series_matrix.txt.gz")
   
@@ -312,14 +323,16 @@ list_results<-local({
     
   })
   
-  list_results<-c(list_results, GSE123009_12w=list(results_123009_12w))
-})
+  GSE123009_12w<-list(GSE123009_12w=results_123009_12w)
+}
 
+#**********************************
 
+#*#*#*#*#*#*#*
+#GSE123009_28w
+#*#*#*#*#*#*#*
 
-#GSE123009_28w####
-
-list_results<-local({
+GSE123009_28w<-function(){
   #Download expression dataset
   gse_123009 <- getGEO(filename = "data/GSE123009_series_matrix.txt.gz")
   
@@ -393,14 +406,16 @@ list_results<-local({
     
   })
   
-  list_results<-c(list_results, GSE123009_28w=list(results_123009_28w))
-})
+  GSE123009_28w<-list(GSE123009_28w=results_123009_28w)
+}
 
+#**********************************
 
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
+#GSE134976_CCvsOC&GSE134976_OOvsCO
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 
-#GSE134976_CCvsOC&GSE134976_OOvsCO####
-
-list_results<-local({
+GSE134976<-function(){
   
   #Import and transform expression data into an ExpressionSet
   gse_134976<-local({
@@ -497,15 +512,17 @@ list_results<-local({
   
   
   #Create a list with the TWO new result files
-  list_results<-c(list_results, GSE134976_CCvsOC=list(results_134976_CCvsOC), 
-                  GSE134976_COvsOO=list(results_134976_COvsOO))
-})
+  GSE134976<-list(GSE134976_CCvsOC=results_134976_CCvsOC, 
+                  GSE134976_COvsOO=results_134976_COvsOO)
+}
 
+#**********************************
 
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
+#GSE44901_CCvsOC&GSE44901_OOvsCO
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 
-#GSE44901_CCvsOC&GSE44901_OOvsCO####
-
-list_results<-local({
+GSE44901<-function(){
   
   #Download expression dataset
   gse_44901 <- getGEO(filename = "data/GSE44901_series_matrix.txt.gz")
@@ -579,13 +596,17 @@ list_results<-local({
   })
   
   #Create a list with the TWO new result files
-  list_results<-c(list_results, GSE44901_CCvsOC=list(results_44901_CCvsOC), 
-                  GSE44901_COvsOO=list(results_44901_COvsOO) )
-})
+  GSE44901<-list(GSE44901_CCvsOC=results_44901_CCvsOC, 
+                  GSE44901_COvsOO=results_44901_COvsOO)
+}
 
-#GSE46359_M&GSE46359_F####
+#**********************************
 
-list_results<-local({
+#*#*#*#*#*#*#*#*#*#*#*
+#GSE46359_M&GSE46359_F
+#*#*#*#*#*#*#*#*#*#*#*
+
+GSE46359<-function(){
   
   #Download expression dataset
   gse_46359 <- getGEO(filename = "data/GSE46359_series_matrix.txt.gz")
@@ -682,15 +703,18 @@ list_results<-local({
     full_results_F
   })
   
-  
   #Create a list with the TWO new result files
-  list_results<-c(list_results, GSE46359_F=list(results_46359_F), 
-                  GSE46359_M=list(results_46359_M) )
-})
+  GSE46359<-list(GSE46359_F=results_46359_F,
+                 GSE46359_M=results_46359_M)
+}
 
-#GSE62715####
+#**********************************
 
-list_results<-local({
+#*#*#*#*#
+#GSE62715
+#*#*#*#*#
+
+GSE62715<-function(){
   
   #Import and transform expression data into an ExpressionSet
   gse_62715<-local({
@@ -766,8 +790,14 @@ list_results<-local({
   })
   
   #Create a list with the TWO new result files
-  list_results<-c(list_results, GSE62715=list(results_62715))
-})
+  GSE62715<-list(GSE62715=results_62715)
+}
+
+#**********************************
+
+#Create list with all the above functions####
+list_results<-c(GSE133767(), GSE40903(), GSE123009_12w(), GSE123009_28w(),
+                GSE134976(), GSE44901(), GSE46359(), GSE62715())
 
 #Create Dataframe####
 #Create a dataframe containing all above created datasets. Add a column containing the name of the GEO

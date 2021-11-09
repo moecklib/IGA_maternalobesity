@@ -1,23 +1,28 @@
-####################
-#MetaVolcano Analsis
-####################
-#Metaanalysis of the dataset according to the MetaVolcanoR package
-#Intitial analysis performed in June 2021 by Beat Moeckli
+---
+title: "MetaVolcano_metaanalysis"
+output: html_notebook
+---
 
+##Background
+Meta analysis of the dataset according to the MetaVolcanoR package. Intitial analysis performed in June 2021 by Beat Moeckli and edited in November 2021.
+
+First import of previously created df_result file with all result in a single dataframe and preparation for use with the MetaVolcano package
+
+```{r import of dataset and preparation}
 library(MetaVolcanoR)
 
 #Import dataframe
-df_results<-read.csv("df_results.csv")
+df_results<-read.csv("df_results.csv")%>%
+  dplyr::filter(!GEOSET%in%c("GSE133767", "GSE62715")) #Filter datasets from fetal and blastocyst offspring
 list_results<-split(df_results, f=df_results$GEOSET)
 
-#browseVignettes("MetaVolcanoR")
+```
 
-head(list_results[[9]])
-length(list_results)
+## Create the metaVolcano elements for further analysis, first random effect model
 
-#Random effect model analysis
-#The summary p-value stands for for the probability that the summary fold change
-#is not different than Zero the perturbation ranking follows the topconfect approach
+Random effect model analysis, The summary p-value stands for for the probability that the summary fold change is not different than Zero the perturbation ranking follows the topconfect approach
+
+```{r Random effect model according to top confect}
 meta_degs_rem <- rem_mv(diffexp=list_results,
                         pcriteria="P.Value",
                         foldchangecol='logFC', 
@@ -35,9 +40,11 @@ meta_degs_rem <- rem_mv(diffexp=list_results,
                         ncores=1)
 
 #Gives the top perturbated genes, following the topconfect approach
-head(meta_degs_rem@metaresult, 100)
+head(meta_degs_rem@metaresult, 40)
+
 #Draws MetaVolcano Plot
 meta_degs_rem@MetaVolcano
+
 #Draws forest plot for individual genes with with all the studies
 draw_forest(remres=meta_degs_rem,
             gene="Fgf21",
@@ -48,9 +55,12 @@ draw_forest(remres=meta_degs_rem,
             jobname="MetaVolcano",
             outputfolder=".",
             draw="HTML")
+```
 
-#assesses in how many of the datasets genes are differentially expressed.
-#Criteria for the genes to be differentially expressed can be manually set.
+## Vote Count model 
+Assesses in how many of the datasets genes are differentially expressed. Criteria for the genes to be differentially expressed can be manually set.
+
+```{r Vote count model}
 meta_degs_vote <- votecount_mv(diffexp=list_results,
                                pcriteria="P.Value",
                                foldchangecol='logFC', 
@@ -59,13 +69,20 @@ meta_degs_vote <- votecount_mv(diffexp=list_results,
                                pvalue=0.05,
                                foldchange=0, 
                                metathr=0.01)
+
+#Gives the frequency of differentially regulated genes in each dataset
 meta_degs_vote@degfreq
-head(meta_degs_vote@metaresult, 50000)
+head(meta_degs_vote@metaresult, 1000)
+
 #Vulcano Graph showing consistency of differential expression
 meta_degs_vote@MetaVolcano
 
-#Analysis combining fold change and p-value combination. 
-#"idx" is calculated as metafc*-log10(metap), this according to the topconfect method
+```
+
+## Combining-approach
+Analysis combining fold change and p-value combination. "idx" is calculated as metafc*-log10(metap), this according to the topconfect method
+
+```{r combining approach}
 meta_degs_comb <- combining_mv(diffexp=list_results,
                                pcriteria='P.Value', 
                                foldchangecol='logFC',
@@ -78,5 +95,8 @@ meta_degs_comb <- combining_mv(diffexp=list_results,
                                outputfolder=".",
                                draw='HTML')
 
-results_metavcomb<-head(meta_degs_comb@metaresult, 2500)
+head(meta_degs_comb@metaresult, 500)
 meta_degs_comb@MetaVolcano
+```
+
+
