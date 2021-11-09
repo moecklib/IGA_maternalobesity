@@ -75,8 +75,9 @@ df_results<-read.csv("df_results.csv")%>%
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 top_DEG<-local({
 
-  #1. Define selection criteria for the datasets
+#1. Define selection criteria for the datasets
 thrLFC<-  0.1
+thrnegLFC<--0.1
 thrpVal<- 0.05
 
 #2. Add additional variables to the datasets for later selection
@@ -84,18 +85,24 @@ top_DEGpreP<-df_results%>%group_by(GEOSET)%>%
   mutate(select=sum(abs(logFC)>thrLFC & P.Value<thrpVal))%>%
   add_count(name="total")%>%
   mutate(FDR=select/(select+total))%>%
-  mutate(dir_up=case_when(logFC>0~1, logFC<0~0, TRUE~0))%>%
-  mutate(dir_dn=case_when(logFC>0~0, logFC<0~1, TRUE~0))%>%
-  mutate(DEG=case_when(abs(logFC)>thrLFC & P.Value<thrpVal~FDR, TRUE~1))%>%
+  mutate(dir_up=case_when(logFC>thrLFC & P.Value<thrpVal~1, TRUE~0))%>%
+  mutate(dir_dn=case_when(logFC<thrnegLFC & P.Value<thrpVal~1, TRUE~0))%>%
+  mutate(DEG=case_when(abs(logFC)>thrLFC & P.Value<thrpVal~FDR, TRUE~1-FDR))%>%
+  ungroup()%>%
+  group_by(symbol)%>%
+  mutate(cons_up=sum(dir_up),cons_dn=sum(dir_dn), 
+         sum_logFC=sum(logFC), FDR_comb=prod(DEG), 
+         Fisher_P.Val=pchisq((sum(log(P.Value))*-2), df=length(P.Value)*2, lower.tail=F))%>%
   ungroup()
 
 #3. Perform the selection of the genes with the following criteria
 #logFC>0.1, P.Val<0.05, sumLogFC>1, dysregulated in more than 3 conditions
-top_DEG<-top_DEGpreP%>%group_by(symbol)%>%
+top_DEG<-top_DEGpreP%>%
   dplyr::filter(abs(logFC)>thrLFC & P.Value<thrpVal)%>%
-  summarise(cons_up=sum(dir_up),cons_dn=sum(dir_dn), 
-            sum_logFC=sum(logFC), FDR_comb=prod(FDR), 
-            Fisher_P.Val=pchisq((sum(log(P.Value))*-2), df=length(P.Value)*2, lower.tail=F))%>%
+  group_by(symbol)%>%
+  summarise(cons_up=unique(cons_up),cons_dn=unique(cons_dn), 
+            sum_logFC=unique(sum_logFC), FDR_comb=unique(FDR_comb), 
+            Fisher_P.Val=unique(Fisher_P.Val))%>%
   dplyr::filter(cons_up>=3 |cons_dn>=3)%>%
   dplyr::filter(abs(sum_logFC)>=1)%>%
   arrange(desc(cons_up, abs(cons_dn), FDR_comb, sum_logFC))
