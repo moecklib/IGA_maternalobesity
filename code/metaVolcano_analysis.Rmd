@@ -10,6 +10,7 @@ First import of previously created df_result file with all result in a single da
 
 ```{r import of dataset and preparation}
 library(MetaVolcanoR)
+library(dplyr)
 
 #Import dataframe
 df_results<-read.csv("df_results.csv")%>%
