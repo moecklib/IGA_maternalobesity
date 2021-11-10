@@ -14,13 +14,18 @@ mycolors<-rev(mycolors)
 
 prep_melt<-function(gene_list){
   #Select only genes of interest from the whole dataset
-  results_goi <-  dplyr::filter(df_results, symbol %in% gene_list)
+  results_goi <-  dplyr::filter(df_results, symbol%in% gene_list)
   
   #Prepare table for further analysis
-  MatrixData<-dplyr::select(results_goi, c(1,3,4))
+  MatrixData<-dplyr::select(results_goi, c(1,3,4))%>%
+    mutate(logFC=case_when(logFC>2~2, TRUE~logFC))%>%
+    mutate(logFC=case_when(logFC>-2~logFC, TRUE~-2))
+  
   MatrixData<-as.data.table(MatrixData)
-  MatrixData<-melt(MatrixData)
+  MatrixData<-melt(MatrixData, id.vars = c("GEOSET", "symbol"),
+                   measure.vars = "logFC")
   MatrixData
+  
 }
 
 tile_ggplot<-list(geom_tile(colour="white",size=0.1),
@@ -61,17 +66,15 @@ theme_Publication <- function(base_size=14, base_family="sans") {
 #*#*#*#*#*#*#*#*#*#*#*#*
 #Import base dataset####
 #*#*#*#*#*#*#*#*#*#*#*#*
-#Import file containing all values for all analysed datasets
-df_results<-read.csv("df_results.csv")
 
+#Import file containing all values for all analysed datasets and
 #Remove datasets with fetal or blastcyst samples
-df_results<-read.csv("df_results.csv")%>%
+df_results<-read.csv("output/df_results.csv")%>%
   dplyr::filter(!GEOSET%in%c("GSE133767", "GSE62715")) #Filter datasets from fetal and blastocyst offspring
 
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 #Perform the selection of genes according to the below steps####
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
-top_DEG<-local({
 
 #1. Define selection criteria for the datasets
 thrLFC<-  0.1
@@ -89,30 +92,29 @@ top_DEGpreP<-df_results%>%group_by(GEOSET)%>%
   ungroup()%>%
   group_by(symbol)%>%
   mutate(cons_up=sum(dir_up),cons_dn=sum(dir_dn), 
-         mean_logFC=mean(abs(logFC)), FDR_comb=prod(DEG), 
-         Fisher_P.Val=pchisq((sum(log(P.Value))*-2), df=length(P.Value)*2, lower.tail=F))%>%
+         median_logFC=median(abs(logFC)), FDR_comb=prod(DEG), 
+         Fisher_P.Val=pchisq((sum(log(P.Value))*-2), df=length(P.Value)*2, lower.tail=F),
+         count=n())%>%
   ungroup()
 
 #3. Perform the selection of the genes with the following criteria
 #logFC>0.1, P.Val<0.05, sumLogFC>1, dysregulated in more than 3 conditions
 top_DEG<-top_DEGpreP%>%
-  #dplyr::filter(abs(logFC)>thrLFC & P.Value<thrpVal)%>%
   group_by(symbol)%>%
-  summarise(cons_up=unique(cons_up),cons_dn=unique(cons_dn), 
-            mean_logFC=unique(mean_logFC), FDR_comb=unique(FDR_comb), 
+  summarise(cons_up=unique(cons_up),cons_dn=unique(cons_dn),total=unique(count), 
+            median_logFC=unique(median_logFC), FDR_comb=unique(FDR_comb), 
             Fisher_P.Val=unique(Fisher_P.Val))%>%
   dplyr::filter(cons_up>=3 |cons_dn>=3)%>%
-  dplyr::filter(mean_logFC>=0.1)%>%
-  arrange(desc(cons_up, abs(cons_dn), FDR_comb, mean_logFC))
-})
+  dplyr::filter(abs(median_logFC)>=0.1)%>%
+  arrange(desc(cons_up, abs(cons_dn), FDR_comb, median_logFC))
 
-#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
-#Add pathway information to genelist####
-#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
+#Add pathway information (wikipathways) to genelist####
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 
-top_DEG_annocleaned<-local({
+top_DEG_annoWikiPathways<-local({
 #Get the wikipathways annotation file
-wp2gene<-read.gmt.wp("data/wikipathways-20210610-gmt-Mus_musculus.gmt")
+wp2gene<-read.gmt.wp("data/wikipathways-20210610-gmt-Mus_musculus.gmt.gz")
 
 #obtain a list with gene names and EntrezID, command "columns(EnsDb.Mmusculus.v79)" shows available colnames
 #Possibility to add entrez ID to gene names
@@ -125,31 +127,92 @@ top_DEG$entrezID<-as.character(top_DEG$entrezID)    #change EntrezID to characte
 #Left join the pathway information from wikipathways with the results table
 top_DEG_anno<-top_DEG%>%left_join(wp2gene%>%dplyr::select(name, gene),
                                   by=c("entrezID"="gene"))%>%
-  group_by(symbol,cons_up, cons_dn, mean_logFC, FDR_comb, Fisher_P.Val)%>%
-  summarize(pathway=paste(name, collapse = ", "))
-
-test<-top_DEG%>%left_join(wp2gene%>%dplyr::select(name, gene),
-                                  by=c("entrezID"="gene"))%>%
-  group_by(name)%>%
-  summarize(pathway=n())%>%
-  arrange(desc(pathway))
+  group_by(symbol,cons_up, cons_dn, total, median_logFC, FDR_comb, Fisher_P.Val)%>%
+  summarize(pathway_wp=paste(name, collapse = ", "))
 
 #Filter all rows with no pathway attributed
-top_DEG_annocleaned<-top_DEG_anno%>%dplyr::filter(pathway!="NA")%>%
-  mutate(sum_cons=cons_up+cons_dn, .after=cons_dn)%>%
-  arrange(desc(sum_cons), FDR_comb, Fisher_P.Val)
+top_DEG_annocleaned<-top_DEG_anno%>%dplyr::filter(pathway_wp!="NA")%>%
+  mutate(max_cons=max(cons_up,cons_dn), .after=cons_dn)%>%
+  arrange(desc(max_cons), desc(median_logFC), Fisher_P.Val)
 })
 
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
+#Add pathway information Reactome to genelist####
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
+
+#Read-in pathway information from the output folder
+reactome_genelist<-read.csv("output/reactome_pathways.csv.gz")%>%
+  transmute(reactome_pw=str_remove(value, ".*:"), symbol=c(name))
+
+#Create list of top deregulated pathways
+#top_dereg_pathways<-top_DEG%>%left_join(reactome_genelist, by=c("symbol"="symbol"))%>%
+#  group_by(reactome_pw)%>%summarise(count=n())%>%arrange(desc(count))
+
+#Annotate top diferentially expressed gene list with pathway data
+top_DEG_annoReactome_pre<-top_DEG%>%left_join(reactome_genelist, by=c("symbol"="symbol"))%>%
+  group_by(symbol,cons_up, cons_dn, total, median_logFC, FDR_comb, Fisher_P.Val)%>%
+  summarize(pathway_reactome=paste(reactome_pw, collapse = ","))%>%
+  mutate(max_cons=max(cons_up,cons_dn), .after=cons_dn)
+
+#Filter all rows with no pathway attributed and set order of genes
+top_DEG_annoReactome<-top_DEG_annoReactome_pre%>%
+  dplyr::filter(pathway_reactome!="NA")%>%
+  arrange(desc(max_cons), desc(median_logFC), Fisher_P.Val)
+
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
+#Filter Reactome gene list with according to predefined pathways####
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
+
+#Filter based on list with pathways of interest imported from an external excel file
+pw_of_interest<-read_excel("overview.xlsx", 4)%>%
+  pull(Pathway)%>%str_c(collapse="|")
+
+top_DEG_filtered<-top_DEG_annoReactome%>%
+  filter(str_detect(pathway_reactome, regex(pw_of_interest, ignore_case = TRUE))|
+           str_detect(symbol, regex(pw_of_interest, ignore_case = TRUE)))
+
+#Write CSV file to output folder
+write.csv(top_DEG_filtered, file="output/TopDEReactome.csv")
+
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
+#Create Full results sheet from predefined gene list, add pathways and filter####
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
+
+#Import a list of defined Genes of Interest
+vector_goi<-read_excel("overview.xlsx", 2)%>%
+  pull(symbol)
+
+#Create fully annotated result sheet as above
+top_GOI_anno<-top_DEGpreP%>%dplyr::filter(symbol%in%vector_goi)%>%
+  group_by(symbol)%>%
+  summarise(cons_up=unique(cons_up),cons_dn=unique(cons_dn),total=unique(count), 
+            median_logFC=unique(median_logFC), FDR_comb=unique(FDR_comb), 
+            Fisher_P.Val=unique(Fisher_P.Val))%>%
+  left_join(reactome_genelist, by=c("symbol"="symbol"))%>%
+  group_by(symbol,cons_up, cons_dn, total, median_logFC, FDR_comb, Fisher_P.Val)%>%
+  summarize(pathway_reactome=paste(reactome_pw, collapse = ","))%>%
+  dplyr::filter(pathway_reactome!="NA")%>%
+  mutate(max_cons=max(cons_up,cons_dn), .after=cons_dn)%>%
+  arrange(desc(max_cons), desc(median_logFC), Fisher_P.Val)
+
+#Filter based on list with pathways of interest
+top_GOI_filtered<-top_GOI_anno%>%
+  filter(str_detect(pathway_reactome, regex(pw_of_interest, ignore_case = TRUE))|
+           str_detect(symbol, regex(pw_of_interest, ignore_case = TRUE)))
+
 #Write the results file to the output folder
-#write.csv(top_DEG_annocleaned, file="output/TopDE_Genes.csv")
+write.csv(top_GOI_filtered, file="output/Top_GOI_filtered.csv")
 
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 #Visualisations of top dereg genes####
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 
 #Filter top regulated genes identified according to the below criteria 
-#(logFC>0.1, P.Val<0.05, sumLogFC>1, more than 3 conditions)
-vec_top_DEG<-top_DEG%>%pull(symbol)
+#(logFC>0.1, P.Val<0.05, median_LogFC>0.1, more than 3 conditions, annotated in
+#reactome. Top 50 were chosen)
+vec_top_DEG<-top_DEG_annoReactome%>%
+  head(n=50)%>%
+  pull(symbol)
 
 #prepare Data for graph
 res_top_DEG<-prep_melt(vec_top_DEG)
@@ -157,19 +220,17 @@ res_top_DEG<-prep_melt(vec_top_DEG)
 #Plot data with geom_tile function, facet grid according to species)
 ggplot(res_top_DEG, aes(x = GEOSET, y = reorder(symbol, value), fill=value)) +   #reorder variables according to values
   scale_fill_continuous_divergingx(palette="RdBu", limits=c(-2,2), rev=TRUE, mid = 0, l3 = 0, p1 = .2, p2 = .6, p3=0.6, p4=0.8) +
-  labs(title="Genes of interest Expression Matrix")+
+  labs(title="Top 50 deregulated genes Expression Matrix")+
   tile_ggplot+theme_Publication()
 
-#Only plot genes with relevant pathway information 
-#Genes contained in the top_DEG_anno_cleaned dataframe
-vec_top_DEG_path<-top_DEG_anno_cleaned%>%
-  pull(symbol)
+##Plot genes that were previously identified as relevant 
+#Genes contained Overview literature search part (vector_goi)
 
 #prepare Data for graph
-res_top_DEG_path<-prep_melt(vec_top_DEG_path)
+res_goi<-prep_melt(vector_goi)
 
 #Plot data with geom_tile function, facet grid according to species)
-ggplot(res_top_DEG_path, aes(x = GEOSET, y = reorder(symbol, value), fill=value)) +   #reorder variables according to values
+ggplot(res_goi, aes(x = GEOSET, y = reorder(symbol, value), fill=value)) +   #reorder variables according to values
   scale_fill_continuous_divergingx(palette="RdBu", limits=c(-2,2), rev=TRUE, mid = 0, l3 = 0, p1 = .2, p2 = .6, p3=0.6, p4=0.8) +
   labs(title="Genes of interest Expression Matrix")+
   tile_ggplot+theme_Publication()

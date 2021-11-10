@@ -27,15 +27,19 @@ young_offspring<-c("GSE133767", "GSE46359_F", "GSE46359_M", "GSE62715")
 
 prep_melt<-function(gene_list){
   #Select only genes of interest from the whole dataset
-  results_goi <-  dplyr::filter(df_results, symbol %in% gene_list)
+  results_goi <-  dplyr::filter(df_results, symbol%in% gene_list)
   
   #Prepare table for further analysis
-  MatrixData<-dplyr::select(results_goi, c(1,3,4))
+  MatrixData<-dplyr::select(results_goi, c(1,3,4))%>%
+    mutate(logFC=case_when(logFC>2~2, TRUE~logFC))%>%
+    mutate(logFC=case_when(logFC>-2~logFC, TRUE~-2))
+  
   MatrixData<-as.data.table(MatrixData)
-  MatrixData<-melt(MatrixData)
+  MatrixData<-melt(MatrixData, id.vars = c("GEOSET", "symbol"),
+                   measure.vars = "logFC")
   MatrixData
+  
 }
-
 tile_ggplot<-list(geom_tile(colour="white",size=0.1),
                   labs(x="GEO Expression Set", y="Gene Symbol", fill="logFC"))
 

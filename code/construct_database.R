@@ -723,7 +723,7 @@ GSE62715<-function(){
     
     #Import matrix containing expression data. Per above description the file contains "CPM and TMM" data
     #The counts table was downloaded from GREIN network (http://www.ilincs.org/apps/grein/?gse=GSE62715)
-    GSE62715_cpm <- read.csv("data/GSE62715_GeneLevel_Normalized(CPM.and.TMM).csv", row.names = 1)%>%
+    GSE62715_cpm <- read.csv("data/GSE62715_GeneLevel_Normalized(CPM.and.TMM).csv.gz", row.names = 1)%>%
       dplyr::select(2:13) #select rows to be compatible with matrix, deselect symbols
     
     #Construct the Biobase ExpressionSet with the given elements
@@ -731,7 +731,7 @@ GSE62715<-function(){
     pData(gse_62715)<-pData(gse_62715_pdata) #enter pData into the newly constructed expressionset
     
     #Enter fData with sample information as needed
-    fData<- read.csv("data/GSE62715_GeneLevel_Normalized(CPM.and.TMM).csv", row.names = 1)%>%
+    fData<- read.csv("data/GSE62715_GeneLevel_Normalized(CPM.and.TMM).csv.gz", row.names = 1)%>%
       dplyr::select(1)%>%   #only select column with the corresponding
       dplyr::rename(symbol=gene_symbol) #rename the var to correspond to other datasets later on
     
@@ -803,4 +803,4 @@ list_results<-c(GSE133767(), GSE40903(), GSE123009_12w(), GSE123009_28w(),
 #Create a dataframe containing all above created datasets. Add a column containing the name of the GEO
 
 df_results<-bind_rows(list_results, .id = "GEOSET")
-write.csv(df_results, file="df_results.csv", row.names=FALSE)
+write.csv(df_results, file="output/df_results.csv", row.names=FALSE)
