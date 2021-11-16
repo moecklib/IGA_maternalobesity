@@ -2,8 +2,8 @@
 library(ggplot2)
 library(patchwork)
 library(ggraph)
+library(SummarizedExperiment)
 source("code/pathway_analysis/lib_go.R")
-source("code/pathway_analysis/lib_reactome.R")
 
 
 # heatmap
@@ -28,34 +28,30 @@ gg_avg_heatmap <- function(avg) {
     )
 }
 
-
-
-x <- read.csv("df_results.csv",check.names = FALSE)
-R <- reactome("Mus musculus")
-gs <- reactome_all_levels(R)
-avg <- tapply(x$logFC,list(x$symbol,x$GEOSET),mean,na.rm=TRUE)
-avg <- avg[rowSums(is.na(avg))<=2,]
-
-local({
-  A <- merge(R$mapping_lowest[c("reactome_id","entrez_id")],R$ancestors,by.x="reactome_id",by.y="descendant_id")
-  A <- A[c("entrez_id","ancestor_id")]
-  A <- unique(A)
-  A$symbol <- select(org.Mm.eg.db,sub("^G:","",A$entrez_id),columns = "SYMBOL")$SYMBOL
-  stopifnot(all(!duplicated(V(R$hierachy)$pathway))) # Check pathway names are unique
-  A$pathway <- V(R$hierachy)[A$ancestor_id]$pathway
-  PW <- splitAsList(paste0(sub("^R:","",A$ancestor_id),":",A$pathway),A$symbol)
-  PW <- stack(PW)
-  PW <- subset(PW,!value %in% "root:root")
-  write.csv(PW,row.names=FALSE,file=gzfile("output/reactome_pathways.csv.gz"))
+# Load data compiled by Beat
+x <- local({
+  x <- read.csv("output/df_results.csv",check.names = FALSE)
+  stopifnot(max(table(x$symbol,x$GEOSET)) == 1)
+  SummarizedExperiment(
+    lapply(x[-1:-3],function(v) tapply(v,list(x$symbol,x$GEOSET),mean,na.rm=TRUE))
+  )
 })
+
+# Add reactome annotations
+mcols(x)$reactome <- local({
+  A <- read.csv("output/reactome_pathways.csv.gz")
+  splitAsList(A$value,factor(A$name,rownames(x)))
+})
+
+# Filter genes
+x <- x[rowSums(!is.na(assay(x))) <= 2]
+
 
 #avg <- avg[rownames(avg) %in% names(which(any(gs %in% "R:R-MMU-8978868|Fatty acid metabolism"))),]
 
-
-
-gg_avg_heatmap(avg)
-ggsave("out/heatmap.png",width = 1.5,height=10)
-ggsave("out/heatmap.pdf",width = 1.5,height=10)
+p <- gg_avg_heatmap(avg)
+ggsave("out/heatmap.png",width = 2,height=10)
+ggsave("out/heatmap.pdf",width = 2,height=10)
 
 
 
