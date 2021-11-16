@@ -44,12 +44,12 @@ mcols(x)$reactome <- local({
 })
 
 # Filter genes
-x <- x[rowSums(!is.na(assay(x))) <= 2]
+x <- x[rowSums(!is.na(assay(x))) >= 2]
 
 
 #avg <- avg[rownames(avg) %in% names(which(any(gs %in% "R:R-MMU-8978868|Fatty acid metabolism"))),]
 
-p <- gg_avg_heatmap(avg)
+p <- gg_avg_heatmap(assay(x))
 ggsave("out/heatmap.png",width = 2,height=10)
 ggsave("out/heatmap.pdf",width = 2,height=10)
 
