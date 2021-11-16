@@ -3,7 +3,8 @@ library(ggplot2)
 library(patchwork)
 library(ggraph)
 library(SummarizedExperiment)
-source("code/pathway_analysis/lib_go.R")
+source("code/pathway_analysis/lib_gsea.R")
+source("code/pathway_analysis/lib_obo.R")
 
 
 # heatmap
@@ -43,41 +44,100 @@ mcols(x)$reactome <- local({
   splitAsList(A$value,factor(A$name,rownames(x)))
 })
 
-# Filter genes
-x <- x[rowSums(!is.na(assay(x))) >= 2]
+mcols(x)$msigdb <- local({
+  A <- read_gmt("data/msigdb.v7.4.symbols.gmt.gz")
+  with(stack(setNames(A$MEMBERS,A$STANDARD_NAME)),splitAsList(as.character(name),factor(value,make.unique(toupper(rownames(x))))))
+})
 
 
-#avg <- avg[rownames(avg) %in% names(which(any(gs %in% "R:R-MMU-8978868|Fatty acid metabolism"))),]
+# Filter data
+x <- x[,setdiff(colnames(x),c("GSE133767","GSE62715"))]
+x <- x[rowSums(!is.na(assay(x))) > 0]
 
-p <- gg_avg_heatmap(assay(x))
-ggsave("out/heatmap.png",width = 2,height=10)
-ggsave("out/heatmap.pdf",width = 2,height=10)
+# Show an heatmap of genes seen in almost all dataset but 2
+gg_avg_heatmap(assay(x[rowSums(is.na(assay(x))) <= 2]))
+ggsave("output/heatmap.png",width = 2,height=10)
+ggsave("output/heatmap.pdf",width = 2,height=10)
 
 
 
-# Select genes with high FC
+
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+# Test Msigdb
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+X <- x[lengths(mcols(x)$msigdb)>0]
+
+# Select annotated genes with low P-value
 set.seed(123)
-ud <- data.frame(
-  dn = apply(+avg,2,rank,ties.method="random") <= 250,
-  up = apply(-avg,2,rank,ties.method="random") <= 250
+mcols(X)$ud <- data.frame(
+  dn = local({
+    P <- -log10(assay(X,"P.Value"))
+    P <- P * ifelse(assay(X,"logFC")<0,-1,1)
+    R <- apply(P,2,rank,ties.method="random")
+    R[is.na(P)] <- NA
+    R <- (R <= 250)
+    R & (assay(X,"logFC") <= -0.1)
+  }),
+  up = local({
+    P <- -log10(assay(X,"P.Value"))
+    P <- P * ifelse(assay(X,"logFC")<0,-1,1)
+    R <- apply(-P,2,rank,ties.method="random")
+    R[is.na(P)] <- NA
+    R <- (R <= 250)
+    R & (assay(X,"logFC") >= +0.1)  })
 )
-gg_avg_heatmap(avg[rownames(ud)[rowSums(ud)>0],])
-ggsave("out/heatmap_top250.png",width = 1.5,height=5)
-ggsave("out/heatmap_top250.pdf",width = 1.5,height=5)
+colSums(mcols(X)$ud,na.rm=TRUE)
+colSums(!is.na(mcols(X)$ud),na.rm=TRUE)
+gsea <- multi_gsea(as.matrix(mcols(X)$ud),mcols(X)$msigdb)
+
+GSEA <- gsea[1:30,]
+
+
+
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+# Now Reactome
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+
+# Select annotated genes with low P-value
+X <- x[lengths(mcols(x)$reactome)>0]
+set.seed(123)
+mcols(X)$ud <- data.frame(
+  dn = local({
+    P <- -log10(assay(X,"P.Value"))
+    P <- P * ifelse(assay(X,"logFC")<0,-1,1)
+    R <- apply(P,2,rank,ties.method="random")
+    R[is.na(P)] <- NA
+    R <- (R <= 250)
+    R & (assay(X,"logFC") <= -0.1)
+  }),
+  up = local({
+    P <- -log10(assay(X,"P.Value"))
+    P <- P * ifelse(assay(X,"logFC")<0,-1,1)
+    R <- apply(-P,2,rank,ties.method="random")
+    R[is.na(P)] <- NA
+    R <- (R <= 250)
+    R & (assay(X,"logFC") >= +0.1)  })
+)
+gg_avg_heatmap(assay(X[rowSums(mcols(X)$ud,na.rm=TRUE)>0,]))
+ggsave("output/heatmap_top250.png",width = 1.5,height=5)
+ggsave("output/heatmap_top250.pdf",width = 1.5,height=5)
 
 
 # Perform enrichment analysis on all sets
-gsea <- gene_set_enrichment_analysis_v2(as.matrix(ud),gs)
-gsea$reactome_id <- V(R$hierachy)$reactome_id[match(gsea$geneset_name,V(R$hierachy)$pathway)]
+gsea <- multi_gsea(as.matrix(mcols(X)$ud),mcols(X)$reactome)
+gsea$reactome_id <- sub(":.*","",gsea$geneset_name)
+gsea$reactome_id <- paste0("R:",gsea$reactome_id)
 
 
 
 
 
 # Select enriched sets
-GSEA <- gsea[rowSums(gsea$enrichment_pval <= 1e-3)>3,]
+GSEA <- gsea[rowSums(gsea$enrichment_pval <= 1e-2)>=3,]
 
 
+source("code/pathway_analysis/lib_reactome.R")
+R <- reactome("Mus musculus")
 local({
   GSEA$reactome_ancestors_id <- splitAsList(R$ancestors$ancestor_id,R$ancestors$descendant_id)[GSEA$reactome_id]
   GSEA$lev1 <- local({
@@ -104,15 +164,14 @@ local({
     theme(panel.grid.minor.x = element_blank(),legend.position = "none") +
     ylab("phred") + xlab("")
 })
-ggsave("out/barplot_all.pdf",width=18,height=8)
+ggsave("output/barplot_all.pdf",width=18,height=8)
 
 
 
 
 
-source("src/lib_util.R")
+source("code/pathway_analysis/lib_util.R")
 library(ggraph)
-
 
 d <- local({
   # Full reactome dendrogram
@@ -159,7 +218,7 @@ p1 <- local({
   M <- reshape2::melt(vd_pval)
   M$sign <- ifelse(sub("^(up|dn)\\.(.*)$","\\1",M$Var2)%in%"dn",-1,+1)
   M$grp <- sub("^(up|dn)\\.(.*)$","\\2",M$Var2)
-  M <- merge(M,as_data_frame(d,"v"),by.x="Var1",by.y="pathway")  # Add layout from p0
+  M <- merge(M,within(as_data_frame(d,"v"),gsea_id<-paste0(sub("^R:","",reactome_id),":",pathway)),by.x="Var1",by.y="gsea_id")  # Add layout from p0
   M <- M[M$terminal,]
   
   # coordinaltes of horizontal lines
@@ -177,7 +236,7 @@ p1 <- local({
 })
 
 p1 + p0 + plot_layout(width=c(3,1))
-ggsave("out/barplot2.pdf",width=17,height=5)
+ggsave("output/barplot2.pdf",width=17,height=5)
 
 
 
@@ -185,7 +244,7 @@ local({
   gsea$geneset_genes <- unstrsplit(gsea$geneset_genes,",")
   gsea$overlap_genes <- endoapply(gsea$overlap_genes,unstrsplit,sep=",")
   gsea$query_size <- gsea$universe_size <- gsea$enrichment_qval <- gsea$reactome_ancestors_id <- gsea$ fold_enrichment <- gsea$expected_overlap_size <- NULL
-  write.table(as.data.frame(gsea),sep="\t",file = "out/barplot_all.tsv",row.names = FALSE)
+  write.table(as.data.frame(gsea),sep="\t",file = "output/barplot_all.tsv",row.names = FALSE)
 })
 
 
