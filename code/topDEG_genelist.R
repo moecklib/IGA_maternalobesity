@@ -1,6 +1,7 @@
 #GENERATION OF TOP DIFFERENTIALLY EXPRESSED GENES
 #NOVEMBER 2021, BEAT MOECKLI, JULIEN PRADOS
 
+
 #loading necessary packages
 lapply(c("tidyverse", "RColorBrewer", "reshape", "data.table", "colorspace", "readxl", "EnsDb.Mmusculus.v79",
          "clusterProfiler"), require, character.only = TRUE)
@@ -172,7 +173,8 @@ top_DEG_filtered<-top_DEG_annoReactome%>%
            str_detect(symbol, regex(pw_of_interest, ignore_case = TRUE)))
 
 #Write CSV file to output folder
-write.csv(top_DEG_filtered, file="output/TopDEReactome.csv")
+write.csv(top_DEG_annoReactome, file="output/topDE_Reactome.csv")
+write.csv(top_DEG_filtered, file="output/TopDE_Reactome_filteredRaw.csv")
 
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 #Create Full results sheet from predefined gene list, add pathways and filter####
@@ -201,7 +203,8 @@ top_GOI_filtered<-top_GOI_anno%>%
            str_detect(symbol, regex(pw_of_interest, ignore_case = TRUE)))
 
 #Write the results file to the output folder
-write.csv(top_GOI_filtered, file="output/Top_GOI_filtered.csv")
+write.csv(top_GOI_anno, file="output/GOI.csv")
+write.csv(top_GOI_filtered, file="output/GOI_filteredRaw.csv")
 
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 #Visualisations of top dereg genes####
