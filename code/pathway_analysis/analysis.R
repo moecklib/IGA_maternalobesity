@@ -49,6 +49,10 @@ mcols(x)$msigdb <- local({
   with(stack(setNames(A$MEMBERS,A$STANDARD_NAME)),splitAsList(as.character(name),factor(value,make.unique(toupper(rownames(x))))))
 })
 
+mcols(x)$beat_selection <- local({
+  rownames(x) %in% read.csv("output/topDE_Reactome.csv",row.names=1)$symbol
+})
+
 
 # Filter data
 x <- x[,setdiff(colnames(x),c("GSE133767","GSE62715"))]
@@ -63,39 +67,7 @@ ggsave("output/heatmap.pdf",width = 2,height=10)
 
 
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
-# Test Msigdb
-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
-X <- x[lengths(mcols(x)$msigdb)>0]
-
-# Select annotated genes with low P-value
-set.seed(123)
-mcols(X)$ud <- data.frame(
-  dn = local({
-    P <- -log10(assay(X,"P.Value"))
-    P <- P * ifelse(assay(X,"logFC")<0,-1,1)
-    R <- apply(P,2,rank,ties.method="random")
-    R[is.na(P)] <- NA
-    R <- (R <= 250)
-    R & (assay(X,"logFC") <= -0.1)
-  }),
-  up = local({
-    P <- -log10(assay(X,"P.Value"))
-    P <- P * ifelse(assay(X,"logFC")<0,-1,1)
-    R <- apply(-P,2,rank,ties.method="random")
-    R[is.na(P)] <- NA
-    R <- (R <= 250)
-    R & (assay(X,"logFC") >= +0.1)  })
-)
-colSums(mcols(X)$ud,na.rm=TRUE)
-colSums(!is.na(mcols(X)$ud),na.rm=TRUE)
-gsea <- multi_gsea(as.matrix(mcols(X)$ud),mcols(X)$msigdb)
-
-GSEA <- gsea[1:30,]
-
-
-
-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
-# Now Reactome
+# Now Reactome analysis
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
 
 # Select annotated genes with low P-value
@@ -103,21 +75,29 @@ X <- x[lengths(mcols(x)$reactome)>0]
 set.seed(123)
 mcols(X)$ud <- data.frame(
   dn = local({
-    P <- -log10(assay(X,"P.Value"))
-    P <- P * ifelse(assay(X,"logFC")<0,-1,1)
+    P <- assay(X,"logFC")
+    P[P>=0] <- NA
+    P[assay(X,"P.Value") <= 0.05] <- NA
     R <- apply(P,2,rank,ties.method="random")
     R[is.na(P)] <- NA
     R <- (R <= 250)
-    R & (assay(X,"logFC") <= -0.1)
+    R[!is.na(assay(X,"logFC"))] <- R[!is.na(assay(X,"logFC"))] %in% TRUE
+    R
   }),
   up = local({
-    P <- -log10(assay(X,"P.Value"))
-    P <- P * ifelse(assay(X,"logFC")<0,-1,1)
+    P <- assay(X,"logFC")
+    P[P<=0] <- NA
+    P[assay(X,"P.Value") <= 0.05] <- NA
     R <- apply(-P,2,rank,ties.method="random")
     R[is.na(P)] <- NA
     R <- (R <= 250)
-    R & (assay(X,"logFC") >= +0.1)  })
+    R[!is.na(assay(X,"logFC"))] <- R[!is.na(assay(X,"logFC"))] %in% TRUE
+    R
+  })
 )
+colSums(mcols(X)$ud,na.rm=TRUE)
+colSums(!is.na(mcols(X)$ud),na.rm=TRUE)
+
 gg_avg_heatmap(assay(X[rowSums(mcols(X)$ud,na.rm=TRUE)>0,]))
 ggsave("output/heatmap_top250.png",width = 1.5,height=5)
 ggsave("output/heatmap_top250.pdf",width = 1.5,height=5)
@@ -227,7 +207,8 @@ p1 <- local({
   
   ggplot(M) + facet_grid(.~grp) +
     geom_rect(aes(ymin=x_layout-0.4,ymax=x_layout+0.4,xmin=0,xmax=sign * -log10(pmax(value,1e-6)),fill=factor(sign)),color="black") +
-    scale_fill_manual(values = c("#990099","yellow")) +
+    #scale_fill_manual(values = c("#990099","yellow")) +
+    scale_fill_manual(values = c("#4393C3","#D6604D")) +
     scale_y_continuous(breaks=V(d)[terminal]$x_layout,labels=V(d)[terminal]$pathway,expand=c(0,1,0,1)) +
     geom_hline(yintercept=hl) +
     theme_bw() +
@@ -246,6 +227,17 @@ local({
   gsea$query_size <- gsea$universe_size <- gsea$enrichment_qval <- gsea$reactome_ancestors_id <- gsea$ fold_enrichment <- gsea$expected_overlap_size <- NULL
   write.table(as.data.frame(gsea),sep="\t",file = "output/barplot_all.tsv",row.names = FALSE)
 })
+
+
+
+
+
+
+
+gsea <- as.matrix(mcols(x)$beat_selection)
+rownames(gsea) <- rownames(x)
+gsea <- multi_gsea(gsea,mcols(x)$reactome)
+
 
 
 
