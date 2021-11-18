@@ -30,27 +30,86 @@ theme_Publication <- function(base_size=14, base_family="sans") {
                 strip.text = element_text(face="bold")
         ))
 }
-?theme_foundation
 
 ui <- fluidPage(
-    titlePanel("Gene expression patterns in offspring of obese dams"),
-    sidebarLayout(
-        sidebarPanel(
-            selectizeInput('gene_selection',"Gene of interest",choices=NULL,multiple=TRUE,width="100%")
+    
+    fluidRow(
+        column(8,
+               h2(strong("Impact of maternal obesity on gene expression")),
+               h5(em("Beat Moeckli, Vaihere Delaune, Julien Prados, 
+             Matthieu Tihy, Andrea Peloso, Graziano Oldani, Thomas Delmi, 
+             Florence Slits, Quentin Gex, Stephanie Lacotte, Christian Toso")),
+               style='margin-bottom:30px;border:1px solid; padding: 10px;'
         ),
-        mainPanel(
-           plotOutput("distPlot")
+        column(4,
+               style = "background-image: url(https://www.geneve-int.ch/whoswho/university-geneva-unige/sites/default/files/styles/scale_450x450/public/2021-06/UNIGE-logo.jpg); 
+               background-size: cover;")),
+    
+    
+    fluidRow(
+        column(4,
+               #Determines the input gene, with possible multiple selections
+               selectizeInput("gene_selection","Gene of interest",
+                              choices=NULL,multiple=TRUE,width="100%"),
+               
+               #Select only datasets depeding on conditions
+               selectizeInput(inputId = "GEOSET_type", label = strong("GEOSET type"),
+                              choices = NULL, multiple=TRUE,
+                              selected = "all"),
+               
+               checkboxGroupInput(inputId = "GEOSET", label = strong("GEOSET"),
+                                  choices=NULL)
+        ),
+        
+        column(8,
+               h4("Datasets according to selection", align="center"),
+               plotOutput("forrestPlot")
         )
-    )
+    ),
+    
+    fluidRow(
+        column(4,
+               h1("plot2")
+        ),
+        
+        column(4,
+               h1("plot3")
+        ),
+        
+        column(4,
+               h1("plot4")
+        )
+    ),
+    
+    fluidRow(column(12,
+                    DT::dataTableOutput("table"),
+                    style='margin-top:30px;border:1px solid; padding: 10px;'
+    )),
+    
+    fluidRow(style="background-color:#f7d0e3",
+             column(12,offset=0,
+                    div(style="align:left",tags$small(a(icon("home",lib="glyphicon"),"Transplantation and Hepatology lab, University of Geneva, Switzerland",href="https://www.unige.ch/medecine/chiru/en/research-groups/905toso/"))),
+                    div(style="align:left",tags$small(a(icon("envelope",lib="glyphicon"),"Beat Moeckli",href="mailto:beat.moeckli@etu.unige.ch"))),
+                    div(style="align:left",tags$small("website designed by:",a("Beat Moeckli",href="mailto:julien.prados@unige.ch"),", ", a(href="https://www.unige.ch/medecine/bioinformatics/","Bioinformatics Support Platform, University of Geneva")))
+             )
+    ),
+    
 )
+
+
 
 server <- function(input, output, session) {
     df_results <- read.csv("df_results.csv.gz")
+    
+    
     updateSelectizeInput(session, 'gene_selection', choices=unique(df_results$symbol), server=TRUE)
     
-    output$distPlot <- renderPlot({
-            ggplot(data=df_results[df_results$symbol %in% input$gene_selection,],
-                   aes(x=GEOSET, y=logFC, ymin=CI.L, ymax=CI.R))+
+    updateCheckboxGroupInput(session, 'GEOSET', choices=unique(df_results$GEOSET))
+    
+    output$forrestPlot <- renderPlot({
+        ggplot(data=df_results[df_results$symbol %in% input$gene_selection&
+                                   df_results$GEOSET %in% input$GEOSET,],
+               aes(x=GEOSET, y=logFC, ymin=CI.L, ymax=CI.R))+
             geom_pointrange()+
             geom_hline(yintercept=0, lty=2)+
             coord_flip() +  # flip coordinates (puts labels on y axis)
@@ -59,6 +118,11 @@ server <- function(input, output, session) {
             ggtitle(input$gene_selection)
         
     })
+    
+    output$table <- DT::renderDataTable(DT::datatable({
+        data <- df_results[df_results$symbol %in% input$gene_selection,]
+        data
+    }))
 }
 
 shinyApp(ui = ui, server = server)
