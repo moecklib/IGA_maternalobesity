@@ -183,7 +183,7 @@ V(d)$terminal <- FALSE;V(d)[!.from(E(d))]$terminal <- TRUE
 # Show simplified dendrogram
 p0 <- ggraph(d,layout="dendrogram") +
   geom_edge_bend() +
-  geom_node_label(aes(label=str_break(pathway,20),filter=!leaf),size=3,hjust=0.5,vjust=0.5) +
+  geom_node_label(aes(label=str_break(pathway,20),filter=!leaf),size=5,hjust=0.5,vjust=0.5) +
   #geom_node_text(aes(label=pathway,filter=leaf),size=3,hjust=0,vjust=0.5) +
   scale_y_continuous(expand=c(0,0,0.1,0)) +
   scale_x_continuous(expand=c(0,1.5,0,1.5)) +
@@ -212,8 +212,10 @@ p1 <- local({
     scale_y_continuous(breaks=V(d)[terminal]$x_layout,labels=V(d)[terminal]$pathway,expand=c(0,1,0,1)) +
     geom_hline(yintercept=hl) +
     theme_bw() +
-    theme(panel.grid.minor.x = element_blank(),legend.position = "none") +
+    theme(panel.grid.minor.x = element_blank(),legend.position = "none",
+          axis.text.y = element_text(size = 13)) +
     xlab("phred")
+    #theme_Publication()
 })
 
 p1 + p0 + plot_layout(width=c(3,1))
