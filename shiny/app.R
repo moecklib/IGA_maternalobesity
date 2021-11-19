@@ -42,8 +42,7 @@ ui <- fluidPage(
                style='margin-bottom:30px;border:1px solid; padding: 10px;'
         ),
         column(4,
-               style = "background-image: url(https://www.geneve-int.ch/whoswho/university-geneva-unige/sites/default/files/styles/scale_450x450/public/2021-06/UNIGE-logo.jpg); 
-               background-size: cover;")),
+               img(src = "logo_unige.jpg"))),
     
     
     fluidRow(
