@@ -1,3 +1,6 @@
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
+#Libraries and overall functions####
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 library(shiny)
 library(ggplot2)
 theme_Publication <- function(base_size=14, base_family="sans") {
@@ -31,6 +34,10 @@ theme_Publication <- function(base_size=14, base_family="sans") {
         ))
 }
 
+
+#*#*#*#*#*#*#*#*#*#
+#User Interface####
+#*#*#*#*#*#*#*#*#*#
 ui <- fluidPage(
     
     fluidRow(
@@ -96,11 +103,12 @@ ui <- fluidPage(
     
 )
 
-
-
+#*#*#*#*#*#*#*#*#*#*#
+#Server Functions####
+#*#*#*#*#*#*#*#*#*#*#
 server <- function(input, output, session) {
-    df_results <- read.csv("df_results.csv.gz")
-    
+    #Import of dataset and selection of appropriate variables
+    df_results <- read.csv("df_results.csv.gz")[,c(1,3:7, 9:11)]
     
     updateSelectizeInput(session, 'gene_selection', choices=unique(df_results$symbol), server=TRUE)
     
@@ -138,6 +146,7 @@ server <- function(input, output, session) {
     
     output$table <- DT::renderDataTable(DT::datatable({
         data <- df_results[df_results$symbol %in% input$gene_selection,]
+        #data <- data[.,c()]
         data
     }))
 }
