@@ -42,7 +42,7 @@ ui <- fluidPage(
                style='margin-bottom:30px;border:1px solid; padding: 10px;'
         ),
         column(4,
-               img(src = "logo_unige.jpg"))),
+               img(src = "logo_unige.jpg", height="100"))),
     
     
     fluidRow(
@@ -68,15 +68,15 @@ ui <- fluidPage(
     
     fluidRow(
         column(4,
-               h1("plot2")
+               h3("Plot 2", align="center")
         ),
         
         column(4,
-               h1("plot3")
+               h3("Plot 3", align="center")
         ),
         
         column(4,
-               h1("plot4")
+               h3("Plot 4", align="center")
         )
     ),
     
