@@ -59,15 +59,15 @@ ui <- fluidPage(
                               choices=NULL,multiple=TRUE,width="100%"),
                
                #Select only datasets depeding on conditions (sex, offspring diet, age)
-               selectizeInput(inputId = "GEOSET_sex", label = strong("Sex offspring"),
+               selectInput(inputId = "GEOSET_sex", label = strong("Sex offspring"),
                               choices = NULL, multiple=FALSE,
-                              selected = "male"),
+                              selected = "all"),
                selectizeInput(inputId = "GEOSET_diet", label = strong("Diet offspring"),
                               choices = NULL, multiple=FALSE,
-                              selected = "HFD"),
+                              selected = "all"),
                selectizeInput(inputId = "GEOSET_age", label = strong("Age offspring"),
                               choices = NULL, multiple=FALSE,
-                              selected = "adult")
+                              selected = "all")
              
         ),
         
@@ -115,16 +115,24 @@ server <- function(input, output, session) {
     df_results <- read.csv("df_results.csv.gz")[,c(1,3:7, 9:11)]
     
     #Import description data of the different GEOSET
-    GEOSET_descr<-data.frame(
+    GEOSET_descr<-local({ GEOSET_descr<-data.frame(
         GEOSET=unique(df_results$GEOSET),
-        sex=c(c(rep("male",times=10), "female", "male")),
+        sex=c(c(rep("male",times=9), "female", "male", "male")),
         age=c("pre-natal",c(rep("adult",times=8)), "suckling", "suckling", "pre-natal"),
         offspring_diet=c(NA, "ND", c(rep("HFD",times=3)), c(rep(c("ND", "HFD"),times=2)), "ND", "ND", NA)
     )
     
+    row_all<-data.frame(
+        GEOSET=unique(df_results$GEOSET), 
+        sex=c(rep("all",times=12)), age=c(rep("all",times=12)), offspring_diet=c(rep("all",times=12))
+    )
+    
+    GEOSET_descr<-rbind(row_all,GEOSET_descr)
+    })
+    
     updateSelectizeInput(session, 'gene_selection', choices=unique(df_results$symbol), server=TRUE)
     
-    updateSelectizeInput(session, 'GEOSET_sex', choices=unique(GEOSET_descr$sex), server=TRUE)
+    updateSelectInput(session, 'GEOSET_sex', choices=unique(GEOSET_descr$sex))
     
     updateSelectizeInput(session, 'GEOSET_diet', choices=unique(GEOSET_descr$offspring_diet), server=TRUE)
     
@@ -134,9 +142,11 @@ server <- function(input, output, session) {
     output$forrestPlot <- renderPlot({
         
         #Select GEOSET's according to above input
-        GEO_sel<-GEOSET_descr$GEOSET[GEOSET_descr$sex%in%input$GEOSET_sex&
-                                         GEOSET_descr$age%in%input$GEOSET_age&
-                                         GEOSET_descr$offspring_diet%in%input$GEOSET_diet]
+        sex<-GEOSET_descr$GEOSET[GEOSET_descr$sex%in%input$GEOSET_sex]
+        age<-GEOSET_descr$GEOSET[GEOSET_descr$age%in%input$GEOSET_age]
+        diet<-GEOSET_descr$GEOSET[GEOSET_descr$offspring_diet%in%input$GEOSET_diet]
+        
+        GEO_sel<-Reduce(intersect, list(sex,age,diet))
         
         #Create plot
         ggplot(data=df_results[df_results$symbol %in% input$gene_selection&
