@@ -68,7 +68,8 @@ ui <- fluidPage(
     
     fluidRow(
         column(4,
-               h3("Plot 2", align="center")
+               h4("Volcano Plot", align="center"),
+               plotOutput("volcanoPlot")
         ),
         
         column(4,
@@ -116,6 +117,23 @@ server <- function(input, output, session) {
             theme_Publication()+
             ggtitle(input$gene_selection)
         
+    })
+    
+    output$volcanoPlot<-renderPlot({
+        #Define Unige color
+        color_unige<-c("#CF0063")
+        
+        #Filter the 8 values from GSE46359 with outlier p-values
+        volc_df<-df_results[!-log10(df_results$P.Value)>20,]
+        
+        #Select the gene to highlight
+        df_select_genes<-volc_df[volc_df$symbol %in% input$gene_selection,]
+        
+        ggplot(volc_df, aes(x=logFC,y=-log10(P.Value)))+
+            geom_point(alpha=0.3, size=1)+
+            geom_point(data=df_select_genes, aes(x=logFC,y=-log10(P.Value)),
+                       color=color_unige)+
+            theme_Publication()
     })
     
     output$table <- DT::renderDataTable(DT::datatable({
