@@ -58,13 +58,17 @@ ui <- fluidPage(
                selectizeInput("gene_selection","Gene of interest",
                               choices=NULL,multiple=TRUE,width="100%"),
                
-               #Select only datasets depeding on conditions
-               selectizeInput(inputId = "GEOSET_type", label = strong("GEOSET type"),
-                              choices = NULL, multiple=TRUE,
-                              selected = "all"),
-               
-               checkboxGroupInput(inputId = "GEOSET", label = strong("GEOSET"),
-                                  choices=NULL)
+               #Select only datasets depeding on conditions (sex, offspring diet, age)
+               selectizeInput(inputId = "GEOSET_sex", label = strong("Sex offspring"),
+                              choices = NULL, multiple=FALSE,
+                              selected = "male"),
+               selectizeInput(inputId = "GEOSET_diet", label = strong("Diet offspring"),
+                              choices = NULL, multiple=FALSE,
+                              selected = "HFD"),
+               selectizeInput(inputId = "GEOSET_age", label = strong("Age offspring"),
+                              choices = NULL, multiple=FALSE,
+                              selected = "adult")
+             
         ),
         
         column(8,
@@ -110,13 +114,33 @@ server <- function(input, output, session) {
     #Import of dataset and selection of appropriate variables
     df_results <- read.csv("df_results.csv.gz")[,c(1,3:7, 9:11)]
     
+    #Import description data of the different GEOSET
+    GEOSET_descr<-data.frame(
+        GEOSET=unique(df_results$GEOSET),
+        sex=c(c(rep("male",times=10), "female", "male")),
+        age=c("pre-natal",c(rep("adult",times=8)), "suckling", "suckling", "pre-natal"),
+        offspring_diet=c(NA, "ND", c(rep("HFD",times=3)), c(rep(c("ND", "HFD"),times=2)), "ND", "ND", NA)
+    )
+    
     updateSelectizeInput(session, 'gene_selection', choices=unique(df_results$symbol), server=TRUE)
     
-    updateCheckboxGroupInput(session, 'GEOSET', choices=unique(df_results$GEOSET))
+    updateSelectizeInput(session, 'GEOSET_sex', choices=unique(GEOSET_descr$sex), server=TRUE)
     
+    updateSelectizeInput(session, 'GEOSET_diet', choices=unique(GEOSET_descr$offspring_diet), server=TRUE)
+    
+    updateSelectizeInput(session, 'GEOSET_age', choices=unique(GEOSET_descr$age), server=TRUE)
+    
+    #Create Forrest Plot
     output$forrestPlot <- renderPlot({
+        
+        #Select GEOSET's according to above input
+        GEO_sel<-GEOSET_descr$GEOSET[GEOSET_descr$sex%in%input$GEOSET_sex&
+                                         GEOSET_descr$age%in%input$GEOSET_age&
+                                         GEOSET_descr$offspring_diet%in%input$GEOSET_diet]
+        
+        #Create plot
         ggplot(data=df_results[df_results$symbol %in% input$gene_selection&
-                                   df_results$GEOSET %in% input$GEOSET,],
+                                   df_results$GEOSET %in% GEO_sel,],
                aes(x=GEOSET, y=logFC, ymin=CI.L, ymax=CI.R))+
             geom_pointrange()+
             geom_hline(yintercept=0, lty=2)+
