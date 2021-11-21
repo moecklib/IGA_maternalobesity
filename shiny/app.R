@@ -1,6 +1,9 @@
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 #Libraries and overall functions####
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
+#Things to do in the scrip:
+#-Add plot which shows the expression level for each gene
+#-Add a tile plot with the following selections 1)p-value, 2)logFC, 3)number of times in different datasets 4)head 50
 library(shiny)
 library(ggplot2)
 theme_Publication <- function(base_size=14, base_family="sans") {
@@ -51,7 +54,7 @@ ui <- fluidPage(
         column(4,
                img(src = "logo_unige.jpg", height="100"))),
     
-    
+    #Row with forrest plot
     fluidRow(
         column(4,
                #Determines the input gene, with possible multiple selections
@@ -77,6 +80,8 @@ ui <- fluidPage(
         )
     ),
     
+    
+    
     fluidRow(
         column(4,
                h4("Volcano Plot", align="center"),
@@ -96,6 +101,27 @@ ui <- fluidPage(
                     DT::dataTableOutput("table"),
                     style='margin-top:30px;border:1px solid; padding: 10px;'
     )),
+    
+    #Layout of the row with the tile plot
+    fluidRow(
+        column(4,
+               #Select gene selection criteria
+               numericInput(inputId = "pValTile", label = strong("max p-value"),
+                           min = 0.0001, max=1, value=0.05),
+               
+               sliderInput(inputId = "logFCTile", label = strong("min log fold change"),
+                           min = 0, max=3, value=0.1, step=0.1),
+               
+               sliderInput(inputId = "nbTile", label = strong("Number of datasets"),
+                           min = 0, max=12, value=3)
+               
+        ),
+        
+        column(8,
+               h4("Genes according to selection", align="center"),
+               plotOutput("tilePlot")
+        )
+    ),
     
     fluidRow(style="background-color:#f7d0e3",
              column(12,offset=0,
@@ -130,6 +156,7 @@ server <- function(input, output, session) {
     GEOSET_descr<-rbind(row_all,GEOSET_descr)
     })
     
+    #update select for forrest plot
     updateSelectizeInput(session, 'gene_selection', choices=unique(df_results$symbol), server=TRUE)
     
     updateSelectInput(session, 'GEOSET_sex', choices=unique(GEOSET_descr$sex))
@@ -137,6 +164,11 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, 'GEOSET_diet', choices=unique(GEOSET_descr$offspring_diet), server=TRUE)
     
     updateSelectizeInput(session, 'GEOSET_age', choices=unique(GEOSET_descr$age), server=TRUE)
+    
+    #update inputs for the heatplot
+    updateNumericInput(session, inputId = "pValTile")
+    updateSliderInput(session, inputId = "logFCTile")
+    updateSliderInput(session, inputId = "nbTile")
     
     #Create Forrest Plot
     output$forrestPlot <- renderPlot({
@@ -159,6 +191,34 @@ server <- function(input, output, session) {
             theme_Publication()+
             ggtitle(input$gene_selection)
         
+    })
+    
+    #Create tile plot for display on the third row
+    output$tilePlot<-renderPlot({
+        ##Produce top gene list for tile plot
+        #Select genes with specified criteria
+        pre_tile<-df_results$symbol[abs(df_results$logFC)>input$logFCTile&
+                                        df_results$P.Value<input$pValTile]
+        genes_tiles<-pre_tile[table(pre_tile)>input$nbTile]
+        
+        #Producedf with top 40 genes
+        df_genes_tile<-df_results[df_results$symbol%in%genes_tiles,]
+        df_genes_tile<-df_genes_tile[order(abs(df_genes_tile$logFC), decreasing=TRUE),]
+        genes_tile40<-unique(head(df_genes_tile, 45)[,2])
+        df_tile40<-df_results[df_results$symbol%in%genes_tile40,]
+        
+        #convert high logFC (smaller or larger than 2) to 2 and select appropriate columns
+        df_tile40$logFC<-ifelse(df_tile40$logFC>2, 2,df_tile40$logFC)
+        df_tile40$logFC<-ifelse(-2>df_tile40$logFC, -2,df_tile40$logFC)
+        df_tile40<-df_tile40[,c(1:3)]
+        
+        #Produce the plot to display
+        ggplot(df_tile40, aes(x = GEOSET, y = reorder(symbol, logFC), fill=logFC)) +   #reorder variables according to values
+            scale_fill_viridis_c()+
+            labs(title="Genes of interest Expression Matrix",
+                 x="GEO Expression Set", y="Gene Symbol", fill="logFC")+
+            geom_tile(colour="white",size=0.1)+
+            theme_Publication()
     })
     
     output$volcanoPlot<-renderPlot({
