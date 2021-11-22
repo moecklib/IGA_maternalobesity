@@ -83,33 +83,24 @@ ui <- fluidPage(
     
     
     fluidRow(
-        column(4,
+        column(6,
                h4("Volcano Plot", align="center"),
                plotOutput("volcanoPlot")
         ),
         
-        column(4,
+        column(6,
                h3("Plot 3", align="center")
-        ),
-        
-        column(4,
-               h3("Plot 4", align="center")
         )
     ),
-    
-    fluidRow(column(12,
-                    DT::dataTableOutput("table"),
-                    style='margin-top:30px;border:1px solid; padding: 10px;'
-    )),
     
     #Layout of the row with the tile plot
     fluidRow(
         column(4,
                #Select gene selection criteria
-               numericInput(inputId = "pValTile", label = strong("max p-value"),
+               numericInput(inputId = "pValTile", label = strong("Max p-value"),
                            min = 0.0001, max=1, value=0.05),
                
-               sliderInput(inputId = "logFCTile", label = strong("min log fold change"),
+               sliderInput(inputId = "logFCTile", label = strong("Min log fold change"),
                            min = 0, max=3, value=0.1, step=0.1),
                
                sliderInput(inputId = "nbTile", label = strong("Number of datasets"),
@@ -122,6 +113,12 @@ ui <- fluidPage(
                plotOutput("tilePlot")
         )
     ),
+    
+    #Insertion of the datatable
+    fluidRow(column(12,
+                    DT::dataTableOutput("table"),
+                    style='margin-top:30px;border:1px solid; padding: 10px;'
+    )),
     
     fluidRow(style="background-color:#f7d0e3",
              column(12,offset=0,
@@ -193,6 +190,34 @@ server <- function(input, output, session) {
         
     })
     
+    output$volcanoPlot<-renderPlot({
+        #Define Unige color
+        color_unige<-c("#CF0063")
+        
+        #Filter the 8 values from GSE46359 with outlier p-values
+        volc_df<-df_results[!-log10(df_results$P.Value)>20,]
+        
+        #Select the gene to highlight
+        df_select_genes<-volc_df[volc_df$symbol %in% input$gene_selection,]
+        
+        ggplot(volc_df, aes(x=logFC,y=-log10(P.Value)))+
+            geom_point(alpha=0.3, size=1)+
+            geom_point(data=df_select_genes, aes(x=logFC,y=-log10(P.Value)),
+                       color=color_unige)+
+            theme_Publication()
+    })
+    
+    output$barPlot<-renderPlot({
+        #Define Unige color
+        color_unige<-c("#CF0063")
+        
+        ggplot()+
+            geom_point(alpha=0.3, size=1)+
+            geom_point(data=df_select_genes, aes(x=logFC,y=-log10(P.Value)),
+                       color=color_unige)+
+            theme_Publication()
+    })
+    
     #Create tile plot for display on the third row
     output$tilePlot<-renderPlot({
         ##Produce top gene list for tile plot
@@ -215,31 +240,13 @@ server <- function(input, output, session) {
         #Produce the plot to display
         ggplot(df_tile40, aes(x = GEOSET, y = reorder(symbol, logFC), fill=logFC)) +   #reorder variables according to values
             scale_fill_viridis_c()+
-            labs(title="Genes of interest Expression Matrix",
-                 x="GEO Expression Set", y="Gene Symbol", fill="logFC")+
+            labs(x="GEO Expression Set", y="Gene Symbol", fill="logFC")+
             geom_tile(colour="white",size=0.1)+
             theme_Publication()
     })
     
-    output$volcanoPlot<-renderPlot({
-        #Define Unige color
-        color_unige<-c("#CF0063")
-        
-        #Filter the 8 values from GSE46359 with outlier p-values
-        volc_df<-df_results[!-log10(df_results$P.Value)>20,]
-        
-        #Select the gene to highlight
-        df_select_genes<-volc_df[volc_df$symbol %in% input$gene_selection,]
-        
-        ggplot(volc_df, aes(x=logFC,y=-log10(P.Value)))+
-            geom_point(alpha=0.3, size=1)+
-            geom_point(data=df_select_genes, aes(x=logFC,y=-log10(P.Value)),
-                       color=color_unige)+
-            theme_Publication()
-    })
-    
     output$table <- DT::renderDataTable(DT::datatable({
-        data <- df_results[df_results$symbol %in% input$gene_selection,]
+        data <- df_results[df_results$symbol %in% input$gene_selection,c(1:3, 6:8)]
         #data <- data[.,c()]
         data
     }))
