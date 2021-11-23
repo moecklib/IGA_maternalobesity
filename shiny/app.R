@@ -62,7 +62,7 @@ ui <- fluidPage(
                          column(4,
                                 #Determines the input gene, with possible multiple selections
                                 selectizeInput("gene_selection","Gene of interest",
-                                               choices=NULL,multiple=TRUE,width="100%"),
+                                               choices=NULL,multiple=TRUE),
                                 
                                 #Select only datasets depeding on conditions (sex, offspring diet, age)
                                 selectInput(inputId = "GEOSET_sex", label = strong("Sex offspring"),
@@ -78,9 +78,11 @@ ui <- fluidPage(
                          ),
                          column(8,
                                 h4("Datasets according to selection", align="center"),
-                                plotOutput("forrestPlot")
+                                plotOutput("forrestPlot",width = "500px")
                          )
                      ),
+                     #Insertion of the datatable
+                     fluidRow(column(12,plotOutput("exprPlot",width = "500px"))),
                      #Insertion of the datatable
                      fluidRow(column(12,
                                      DT::dataTableOutput("table"),
@@ -118,7 +120,7 @@ ui <- fluidPage(
              column(12,offset=0,
                     div(style="align:left",tags$small(a(icon("home",lib="glyphicon"),"Transplantation and Hepatology lab, University of Geneva, Switzerland",href="https://www.unige.ch/medecine/chiru/en/research-groups/905toso/"))),
                     div(style="align:left",tags$small(a(icon("envelope",lib="glyphicon"),"Beat Moeckli",href="mailto:beat.moeckli@etu.unige.ch"))),
-                    div(style="align:left",tags$small("website designed by:",a("Beat Moeckli",href="mailto:julien.prados@unige.ch"),", ", a(href="https://www.unige.ch/medecine/bioinformatics/","Bioinformatics Support Platform, University of Geneva")))
+                    div(style="align:left",tags$small("website designed by:",a("Beat Moeckli",href="mailto:beat.moeckli@etu.unige.ch"),", ", a(href="https://www.unige.ch/medecine/bioinformatics/","Bioinformatics Support Platform, University of Geneva")))
              )
     )
 )
