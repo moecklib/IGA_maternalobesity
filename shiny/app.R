@@ -84,7 +84,6 @@ ui <- fluidPage(
                          ),
                          
                          column(8,
-                                h4("Datasets according to selection", align="center"),
                                 plotOutput("forrestPlot",width = plotwidth)
                          )
                      ),
@@ -126,8 +125,7 @@ ui <- fluidPage(
                          ),
                          
                          column(8,
-                                h4("Volcano plot", align="center"),
-                                plotOutput("volcanoPlot",width = plotwidth)
+                                plotOutput("volcanoPlot",width = plotwidth, height=plotwidth)
                          )
                      ),
       
@@ -158,7 +156,7 @@ ui <- fluidPage(
                      
                      column(8,
                             h4("Genes according to selection", align="center"),
-                            plotOutput("tilePlot", width = plotwidth)
+                            plotOutput("tilePlot", width = plotwidth, height=plotwidth)
                      ),
                      
             ),
@@ -217,12 +215,14 @@ server <- function(input, output, session) {
             GEOSET=unique(df_results$GEOSET),
             sex=c(c(rep("male",times=9), "female", "male", "male")),
             age=c("pre-natal",c(rep("adult",times=8)), "suckling", "suckling", "pre-natal"),
-            offspring_diet=c(NA, "ND", c(rep("HFD",times=3)), c(rep(c("ND", "HFD"),times=2)), "ND", "ND", NA)
+            diet_mother=c(NA, "ND", c(rep("HFD",times=3)), c(rep(c("ND", "HFD"),times=2)), "ND", "ND", NA)
+
         )
     
         row_all<-data.frame(
             GEOSET=unique(df_results$GEOSET), 
-            sex=c(rep("all",times=12)), age=c(rep("all",times=12)), offspring_diet=c(rep("all",times=12))
+            sex=c(rep("all",times=12)), age=c(rep("all",times=12)), 
+            diet_mother=c(rep("all",times=12))
         )
         
         GEOSET_descr<-rbind(row_all,GEOSET_descr)
@@ -231,7 +231,7 @@ server <- function(input, output, session) {
     #update select for forrest plot
     updateSelectInput(session, 'GEOSET_sex', choices=unique(GEOSET_descr$sex))
     
-    updateSelectizeInput(session, 'GEOSET_diet', choices=unique(GEOSET_descr$offspring_diet), 
+    updateSelectizeInput(session, 'GEOSET_diet', choices=unique(GEOSET_descr$diet_mother), 
                          server=TRUE)
     
     updateSelectizeInput(session, 'GEOSET_age', choices=unique(GEOSET_descr$age), server=TRUE)
@@ -254,7 +254,7 @@ server <- function(input, output, session) {
         #Select GEOSET's according to above input
         sex<-GEOSET_descr$GEOSET[GEOSET_descr$sex%in%input$GEOSET_sex]
         age<-GEOSET_descr$GEOSET[GEOSET_descr$age%in%input$GEOSET_age]
-        diet<-GEOSET_descr$GEOSET[GEOSET_descr$offspring_diet%in%input$GEOSET_diet]
+        diet<-GEOSET_descr$GEOSET[GEOSET_descr$diet_mother%in%input$GEOSET_diet]
         
         GEO_sel<-Reduce(intersect, list(sex,age,diet))
         
@@ -298,7 +298,7 @@ server <- function(input, output, session) {
         R <- exp_rank()
         
         ggplot(reshape2::melt(R[input$gene_selection,,drop=FALSE])) + 
-            geom_point(aes(x=Var2,y=value), shape=95, size=12,
+            geom_point(aes(x=Var2,y=value), shape=95, size=16,
                        color=color_unige) + 
             geom_col(aes(x=Var2, y=1), color="black", alpha=0.1)+
             theme_Publication() + 
@@ -351,7 +351,10 @@ server <- function(input, output, session) {
         GEOSET=unique(df_results$GEOSET),
         sex=c(c(rep("male",times=9), "female", "male", "male")),
         age=c("pre-natal",c(rep("adult",times=8)), "suckling", "suckling", "pre-natal"),
-        offspring_diet=c(NA, "ND", c(rep("HFD",times=3)), c(rep(c("ND", "HFD"),times=2)), "ND", "ND", NA)
+        diet_mother=c(NA, "ND", c(rep("HFD",times=3)), c(rep(c("ND", "HFD"),times=2)), 
+                         "ND", "ND", NA),
+        year_published=c("2019","2014","2014","2019","2019", "2019", "2019",
+                         "2014", "2014", "2013", "2013", "2014")
       )
     
       GEOSET_description
