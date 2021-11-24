@@ -1,7 +1,7 @@
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 #Plot structure & functions####
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
-#*
+
 #loading necessary packages
 lapply(c("tidyverse", "RColorBrewer", "reshape", "data.table", "colorspace",
          "ggbeeswarm"), require, character.only = TRUE)
@@ -55,7 +55,7 @@ boxplot_style<-list(geom_boxplot(size=1.5),
 #Import datafiles####
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 
-
+histo_Tihy<-read.csv("data/No_DEN_Tihy2.csv")
 
 #*#*#*#*#*#*#*#*#
 #Create plots####
@@ -130,6 +130,14 @@ ggplot(data= no_DEN, aes(x = group, y = MT2_ratio_surface, fill=group))+
   boxplot_style+
   scale_y_continuous(trans='log2')+
   labs(y= "log2 (Relative surface of steatosis [%])", x=NULL)+
-  ggtitle("ALT level")
+  ggtitle("Steatosis Assessment 1")
 
+#Steatosis Boxplot
+ggplot(data= histo_Tihy, aes(x = group, y = RatioCelluleSurVacuoles, fill=group))+
+  boxplot_style+
+  scale_y_continuous(trans='log2')+
+  labs(y= "log2 (Relative surface of steatosis [%])", x=NULL)+
+  ggtitle("Steatosis")
+
+colnames(histo_Tihy)
 mean(no_DEN[no_DEN$group=="F_HFD","ALT_24w"])
