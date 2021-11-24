@@ -1,12 +1,10 @@
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 #Libraries and overall functions####
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
-#Things to do in the scrip:
-#-Add plot which shows the expression level for each gene
-#-Add a tile plot with the following selections 1)p-value, 2)logFC, 3)number of times in different datasets 4)head 50
+
 library(shiny)
 library(ggplot2)
-theme_Publication <- function(base_size=14, base_family="sans") {
+theme_Publication <- function(base_size=18, base_family="sans") {
     library(grid)
     (theme_bw(base_size=base_size, base_family=base_family)
         + theme(plot.title = element_text(face = "bold",
@@ -25,8 +23,8 @@ theme_Publication <- function(base_size=14, base_family="sans") {
                 panel.grid.major = element_line(colour="#f0f0f0"),
                 panel.grid.minor = element_blank(),
                 legend.key = element_rect(colour = NA),
-                legend.position = "right",
-                legend.direction = "vertical",
+                legend.position = "bottom",
+                legend.direction = "horizontal",
                 legend.box = "vetical",
                 legend.key.size= unit(0.5, "cm"),
                 #legend.margin = unit(0, "cm"),
@@ -37,27 +35,33 @@ theme_Publication <- function(base_size=14, base_family="sans") {
         ))
 }
 
-
 #*#*#*#*#*#*#*#*#*#
 #User Interface####
 #*#*#*#*#*#*#*#*#*#
+#Define plotwidth
+plotwidth<-"700px"
+
 ui <- fluidPage(
     
     fluidRow(
         column(8,
-               h2(strong("Impact of maternal obesity on gene expression")),
-               h5(em("Beat Moeckli, Vaihere Delaune, Julien Prados, 
+               h1(strong("Impact of maternal obesity on gene expression")),
+               h4(em("Beat Moeckli, Vaihere Delaune, Julien Prados, 
              Matthieu Tihy, Andrea Peloso, Graziano Oldani, Thomas Delmi, 
-             Florence Slits, Quentin Gex, Stephanie Lacotte, Christian Toso")),
-               style='margin-bottom:30px;border:1px solid; padding: 10px;'
+             Florence Slits, Quentin Gex, Laura Rubbia-Brandt, Nicolas Goossens, 
+                     Stephanie Lacotte, Christian Toso")),
+               style='margin-bottom:30px;padding: 10px;'
         ),
+        
         column(4,
-               img(src = "logo_unige.jpg", height="100"))),
+               img(src = "logo_unige.jpg", height="100")
+               )
+        ),
     
     #Row with forrest plot
     fluidRow(column(12,
         tabsetPanel(
-            tabPanel("Forest Plot",
+            tabPanel(strong("Forest Plot"),
                      fluidRow(
                          column(4,
                                 #Determines the input gene, with possible multiple selections
@@ -68,32 +72,69 @@ ui <- fluidPage(
                                 selectInput(inputId = "GEOSET_sex", label = strong("Sex offspring"),
                                             choices = NULL, multiple=FALSE,
                                             selected = "all"),
-                                selectizeInput(inputId = "GEOSET_diet", label = strong("Diet offspring"),
+                                selectizeInput(inputId = "GEOSET_diet", label = strong("Diet mother"),
                                                choices = NULL, multiple=FALSE,
                                                selected = "all"),
                                 selectizeInput(inputId = "GEOSET_age", label = strong("Age offspring"),
                                                choices = NULL, multiple=FALSE,
-                                               selected = "all")
-                                
+                                               selected = "all"),
+                                p("Enter the gene of interest in the first field and select 
+                                the characetistics of the datasets 
+                                in which you would like to to display the log fold change." )
                          ),
+                         
                          column(8,
                                 h4("Datasets according to selection", align="center"),
-                                plotOutput("forrestPlot",width = "500px")
+                                plotOutput("forrestPlot",width = plotwidth)
                          )
                      ),
-                     #Insertion of the datatable
-                     fluidRow(column(12,plotOutput("exprPlot",width = "500px"))),
+                     
+                     #Insertion of level of expression plot
+                     fluidRow(style="margin-top:20px",
+                              column(4,
+                                     h5("Description"),
+                                     p("The graph to the right displays the gene expression level of the 
+                                     above selected gene in each individual dataset as percentile. Highly
+                                       expressed genes are closer to 100%.")
+                                     ),
+                              
+                              column(8,
+                                     plotOutput("exprPlot",width = plotwidth)
+                                     )
+                              ),
+
+                     
                      #Insertion of the datatable
                      fluidRow(column(12,
-                                     DT::dataTableOutput("table"),
-                                     style='margin-top:30px;border:1px solid; padding: 10px;'
-                     ))
+                                     dataTableOutput("table"),
+                                     style='margin-top:20px;padding: 10px;'
+                                     )
+                     )
+                     
             ),
-            tabPanel("Volcano Plot",
-                     h4("Volcano Plot", align="center"),
-                     plotOutput("volcanoPlot")
+            
+            tabPanel(strong("Volcano Plot"),
+                     fluidRow(
+                         column(4,
+                                #Determines the input gene, with possible multiple selections
+                                selectizeInput("gene_selectionV","Gene of interest",
+                                               choices=NULL,multiple=TRUE),
+
+                                p("Enter the gene of interest in the field above. The black diamond
+                                indicates the relative position (logFC, p-value) of the selcted  genes in 
+                                regards to all other genes" )
+                         ),
+                         
+                         column(8,
+                                h4("Volcano plot", align="center"),
+                                plotOutput("volcanoPlot",width = plotwidth)
+                         )
+                     ),
+      
             ),
-            tabPanel("Heatmap",
+            
+            #TabPanel heatmap
+            tabPanel(strong("Heatmap"),
                      #Layout of the row with the tile plot
                      column(4,
                             #Select gene selection criteria
@@ -104,30 +145,57 @@ ui <- fluidPage(
                                         min = 0, max=3, value=0.1, step=0.1),
                             
                             sliderInput(inputId = "nbTile", label = strong("Number of datasets"),
-                                        min = 0, max=12, value=3)
+                                        min = 0, max=12, value=3),
+                            
+                            p("You can select genes based on the above conditions:" ),
+                            p(strong("p-value:"),"Maximal p-value for the gene to be included"),
+                            p(strong("logFC:"),"Minimum logarithmic fold change for the gene to be included"),
+                            p(strong("Number of datasets:"),
+                              "Minimum number of conditions/datasets in which the above conditions
+                              need to be fulfilled for the gene to be included.")
                             
                      ),
                      
                      column(8,
                             h4("Genes according to selection", align="center"),
-                            plotOutput("tilePlot")
-                     )
+                            plotOutput("tilePlot", width = plotwidth)
+                     ),
+                     
+            ),
+            
+            #TabPanel GEOSET description
+            tabPanel(strong("GEOSET description"),
+                     column(4,
+                                     h5("Description"),
+                                     p("Table with the characteristics of the included datasets
+                                       in this study")
+                     ),
+                     
+                      column(8,
+                                     dataTableOutput("GEOSETtable")
+                             )
             )
         )
-    )),
-
-    fluidRow(style="background-color:#f7d0e3",
+        ),
+        
+        #Footer of the page
+        fluidRow(
              column(12,offset=0,
-                    div(style="align:left",tags$small(a(icon("home",lib="glyphicon"),"Transplantation and Hepatology lab, University of Geneva, Switzerland",href="https://www.unige.ch/medecine/chiru/en/research-groups/905toso/"))),
+                    div(style="align:left",tags$small(a(icon("home",lib="glyphicon"),"Transplantation and Hepatology lab, University of Geneva, Switzerland",
+                                                        href="https://www.unige.ch/medecine/chiru/en/research-groups/905toso/"))),
                     div(style="align:left",tags$small(a(icon("envelope",lib="glyphicon"),"Beat Moeckli",href="mailto:beat.moeckli@etu.unige.ch"))),
-                    div(style="align:left",tags$small("website designed by:",a("Beat Moeckli",href="mailto:beat.moeckli@etu.unige.ch"),", ", a(href="https://www.unige.ch/medecine/bioinformatics/","Bioinformatics Support Platform, University of Geneva")))
+                    div(style="align:left",tags$small("website designed by:",a("Beat Moeckli",href="mailto:beat.moeckli@etu.unige.ch"),", ", 
+                                                      a(href="https://www.unige.ch/medecine/bioinformatics/","Bioinformatics Support Platform, University of Geneva"))),
+                    style='margin-top:5px;padding: 20px;'
              )
     )
+)
 )
 
 #*#*#*#*#*#*#*#*#*#*#
 #Server Functions####
 #*#*#*#*#*#*#*#*#*#*#
+
 server <- function(input, output, session) {
     #Import of dataset and selection of appropriate variables
     #df_results <- read.csv("df_results.csv.gz")[,c(1,3:7, 9:10)];saveRDS(df_results,file="df_results.rds")
@@ -163,11 +231,16 @@ server <- function(input, output, session) {
     #update select for forrest plot
     updateSelectInput(session, 'GEOSET_sex', choices=unique(GEOSET_descr$sex))
     
-    updateSelectizeInput(session, 'GEOSET_diet', choices=unique(GEOSET_descr$offspring_diet), server=TRUE)
+    updateSelectizeInput(session, 'GEOSET_diet', choices=unique(GEOSET_descr$offspring_diet), 
+                         server=TRUE)
     
     updateSelectizeInput(session, 'GEOSET_age', choices=unique(GEOSET_descr$age), server=TRUE)
     
-    updateSelectizeInput(session, 'gene_selection', choices=unique(df_results$symbol),selected = "Lcn2", server=TRUE)
+    updateSelectizeInput(session, 'gene_selection', choices=unique(df_results$symbol),
+                         selected = "Lcn2", server=TRUE)
+    
+    updateSelectizeInput(session, 'gene_selectionV', choices=unique(df_results$symbol),
+                         selected = "Fgf21", server=TRUE)
     
     
     #update inputs for the heatplot
@@ -206,24 +279,34 @@ server <- function(input, output, session) {
         volc_df<-df_results[!-log10(df_results$P.Value)>20,]
         
         #Select the gene to highlight
-        df_select_genes<-volc_df[volc_df$symbol %in% input$gene_selection,]
+        df_select_gene<-volc_df[volc_df$symbol %in% input$gene_selectionV,]
         
-        ggplot(volc_df, aes(x=logFC,y=-log10(P.Value)))+
-            geom_point(alpha=0.3, size=1)+
-            geom_point(data=df_select_genes, aes(x=logFC,y=-log10(P.Value)),
-                       color=color_unige)+
-            theme_Publication()
+        ggplot(volc_df, aes(x=logFC,y=-log10(P.Value), color=GEOSET))+
+          geom_point(data=volc_df, aes(x=logFC,y=-log10(P.Value), color=GEOSET),
+                     alpha=0.3, size=1.5)+
+          geom_point(data=df_select_gene, aes(x=logFC,y=-log10(P.Value)),
+                     color="black", shape=18, size=4)+
+          theme_Publication()
     })
     
-    output$barPlot<-renderPlot({
-        #Define Unige color
+    #Expression rank plot
+    #Define Unige color
+    output$exprPlot <- renderPlot({
         color_unige<-c("#CF0063")
         
-        ggplot()+
-            geom_point(alpha=0.3, size=1)+
-            geom_point(data=df_select_genes, aes(x=logFC,y=-log10(P.Value)),
-                       color=color_unige)+
-            theme_Publication()
+        #Import expression rank function
+        R <- exp_rank()
+        
+        ggplot(reshape2::melt(R[input$gene_selection,,drop=FALSE])) + 
+            geom_point(aes(x=Var2,y=value), shape=95, size=12,
+                       color=color_unige) + 
+            geom_col(aes(x=Var2, y=1), color="black", alpha=0.1)+
+            theme_Publication() + 
+            ylab("Gene Expression percentile") + 
+            xlab("dataset") + 
+            scale_y_continuous(labels=scales::percent,limits=c(0,1)) 
+            #ggtitle(input$gene_selection)
+        
     })
     
     #Create tile plot for display on the third row
@@ -253,25 +336,27 @@ server <- function(input, output, session) {
             theme_Publication()
     })
     
-    output$table <- DT::renderDataTable(DT::datatable({
-        data <- df_results[df_results$symbol %in% input$gene_selection,c(1:3, 6:8)]
-        #data <- data[.,c()]
+    #Datatable with selected genes
+    output$table <- renderDataTable({
+        data <- df_results[df_results$symbol %in% input$gene_selection,
+                           c(1:3, 6:8)]
+        data$P.Value<-formatC(data$P.Value, format="E", digits=2)
+        data$adj.P.Val<-formatC(data$adj.P.Val, format="E", digits=2)
         data
-    }))
-    
-    output$exprPlot <- renderPlot({
-        R <- exp_rank()
-        
-        ggplot(reshape2::melt(R[input$gene_selection,,drop=FALSE])) + 
-            geom_point(aes(x=Var2,y=value)) + 
-            theme_Publication() + 
-            ylab("Gene Expression percentile") + 
-            xlab("dataset") + 
-            scale_y_continuous(labels=scales::percent,limits=c(0,1)) + 
-            ggtitle(input$gene_selection)
-        
-        
     })
+    
+    #Datatable with GEOSET description
+    output$GEOSETtable <- renderDataTable({
+      GEOSET_description <- data.frame(
+        GEOSET=unique(df_results$GEOSET),
+        sex=c(c(rep("male",times=9), "female", "male", "male")),
+        age=c("pre-natal",c(rep("adult",times=8)), "suckling", "suckling", "pre-natal"),
+        offspring_diet=c(NA, "ND", c(rep("HFD",times=3)), c(rep(c("ND", "HFD"),times=2)), "ND", "ND", NA)
+      )
+    
+      GEOSET_description
+    })
+    
 }
 
 shinyApp(ui = ui, server = server)
