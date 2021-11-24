@@ -2,7 +2,8 @@
 #JUNE/JULY 2021, BEAT MOECKLI
 
 #loading necessary packages
-lapply(c("tidyverse", "RColorBrewer", "reshape", "data.table", "colorspace", "readxl"), require, character.only = TRUE)
+lapply(c("tidyverse", "RColorBrewer", "reshape", "data.table", "colorspace", "readxl"), 
+       require, character.only = TRUE)
 
 mycolors<-c(brewer.pal(11, "RdBu"))
 mycolors<-rev(mycolors)

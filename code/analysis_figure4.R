@@ -30,7 +30,7 @@ theme_Publication <- function(base_size=32, base_family="sans") {
             panel.grid.major = element_line(colour="#f0f0f0"),
             panel.grid.minor = element_blank(),
             legend.key = element_rect(colour = NA),
-            legend.position = "bottom",
+            legend.position = "right",
             legend.direction = "vertical",
             legend.box = "vetical",
             legend.key.size= unit(0.5, "cm"),
@@ -44,12 +44,15 @@ theme_Publication <- function(base_size=32, base_family="sans") {
 
 boxplot_style<-list(geom_boxplot(size=1.5),
                         geom_beeswarm(color="black", size=5, alpha=0.8, shape=17),
-                        geom_signif(comparisons = list(c("F_HFD", "F_ND")), test = wilcox.test, textsize = 11),
-                        geom_signif(comparisons = list(c("M_HFD", "M_ND")), test = wilcox.test, textsize = 11),
+                        geom_signif(comparisons = list(c("F_HFD", "F_ND")), test = wilcox.test, textsize = 11,
+                                    size=1),
+                        geom_signif(comparisons = list(c("M_HFD", "M_ND")), test = wilcox.test, textsize = 11,
+                                    size=1),
                         scale_fill_manual(values=mycolors_groups),
                         theme_Publication(),
                     theme(legend.position="none")
 )
+?geom_signif
 
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 #Import datafiles####
@@ -92,19 +95,22 @@ weight_offspring%>%dplyr::filter(week%in%c(4,18))%>%
   scale_fill_manual(values=mycolors_groups)+
   labs(y= "Weight [g]", x="Week of life")+
   theme_Publication()+
-  theme(legend.position="none",axis.text.x=element_blank(), axis.ticks.x=element_blank())
+  theme(legend.position="none",axis.text.x=element_blank(), axis.ticks.x=element_blank())+
+  ggtitle("Weight 4 & 18 weeks")
 
 #ALT plot
 ggplot(data= no_DEN, aes(x = group, y = ALT_24w, fill=group))+
   boxplot_style+
   scale_y_log10(limits = c(0.8e1, 1.5e2), expand = c(0, 0))+
-  labs(y= "log10( ALT conc [IU/l] )", x=NULL)
+  labs(y= "log10( ALT conc [IU/l] )", x=NULL)+
+  ggtitle("Alanine transaminase")
 
 
 #OGTT plot
 ggplot(data= no_DEN, aes(x = group, y = OGTT_24w, fill=group))+
   boxplot_style+
-  labs(y= "AUC [mmol/min]", x=NULL)
+  labs(y= "AUC [mmol/min]", x=NULL)+
+  ggtitle("Oral Glucose Tolerance")
 
 
 #NAFLD Barplots
@@ -118,22 +124,19 @@ ggplot(data= no_DEN, aes(x = group, fill=Bedossa_et_al.))+
             size=8)+
   labs(y= "Proportion Histology", x=NULL)+
   scale_fill_manual(values = c("No NAFLD" = "#cccccc", "NAFLD" = "#fd8f24", "NASH" = "#c03728"))+
+  ggtitle("Proportion of NAFLD or NASH")+
   theme_Publication()
+
 
 #Fibrosis Boxplot
 ggplot(data= no_DEN, aes(x = group, y = rel_fibrosis_Qpath, fill=group))+
   boxplot_style+
-  labs(y= "Relative surface of fibrosis [%]", x=NULL)
+  scale_y_continuous(trans='log2')+
+  labs(y= "Relative surface of fibrosis [%]", x=NULL)+
+  ggtitle("Fibrosis")
 
 #Steatosis Boxplot
 ggplot(data= no_DEN, aes(x = group, y = MT2_ratio_surface, fill=group))+
-  boxplot_style+
-  scale_y_continuous(trans='log2')+
-  labs(y= "log2 (Relative surface of steatosis [%])", x=NULL)+
-  ggtitle("Steatosis Assessment 1")
-
-#Steatosis Boxplot
-ggplot(data= histo_Tihy, aes(x = group, y = RatioCelluleSurVacuoles, fill=group))+
   boxplot_style+
   scale_y_continuous(trans='log2')+
   labs(y= "log2 (Relative surface of steatosis [%])", x=NULL)+

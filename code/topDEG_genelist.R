@@ -237,3 +237,19 @@ ggplot(res_goi, aes(x = GEOSET, y = reorder(symbol, value), fill=value)) +   #re
   scale_fill_continuous_divergingx(palette="RdBu", limits=c(-2,2), rev=TRUE, mid = 0, l3 = 0, p1 = .2, p2 = .6, p3=0.6, p4=0.8) +
   labs(title="Genes of interest Expression Matrix")+
   tile_ggplot+theme_Publication()
+
+##Plot genes that were previously identified as relevant 
+#Genes contained Overview literature search part (vector_goi) + genes in NAFLD pathways
+#For figure accompanying the EASL abstract 2021
+
+#Pull symbols of filtered genes
+filtered_genes<-c(top_GOI_filtered$symbol, top_DEG_filtered$symbol, "Fgf21")
+
+#prepare Data for graph
+res_filtered<-prep_melt(filtered_genes)
+
+#Plot data with geom_tile function, facet grid according to species)
+ggplot(res_filtered, aes(x = GEOSET, y = reorder(symbol, value), fill=value)) +   #reorder variables according to values
+  scale_fill_continuous_divergingx(palette="RdBu", limits=c(-2,2), rev=TRUE, mid = 0, l3 = 0, p1 = .2, p2 = .6, p3=0.6, p4=0.8) +
+  labs(title="Genes of interest Expression Matrix")+
+  tile_ggplot+theme_Publication()
