@@ -33,7 +33,7 @@ qPCR_results<-qPCR_results_pre%>%left_join(sampleKey1)%>%
 
 #Create annotated outputfile, include Fgf21 manually and reread the file
 #write.csv(qPCR_results, file="data/qPCR_analysis/20211119_qPCR_ResAnnotated.csv")
-#qPCR_results<-read.csv(file="data/qPCR_analysis/20211119_qPCR_ResAnnotated.csv")
+qPCR_results<-read.csv(file="data/qPCR_analysis/20211119_qPCR_ResAnnotated.csv")
 
 #Pivot longer to be able to display results in a facet wrap
 long_qPCR_results<-qPCR_results%>%mutate(sample=as.character(sample), cage_ID=as.character(cage_ID))%>%
@@ -71,12 +71,13 @@ theme_Publication <- function(base_size=32, base_family="sans") {
             legend.key.size= unit(0.5, "cm"),
             #legend.margin = unit(0, "cm"),
             legend.title = element_text(face="italic"),
-            plot.margin=unit(c(10,5,5,5),"mm"),
+            plot.margin=unit(c(5,5,5,5),"mm"),
             strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
             strip.text = element_text(face="bold")
     ))
 }
 
+?theme
 
 qPCR_style<-list(geom_boxplot(size=1.5),
                     geom_beeswarm(color="black", size=5, alpha=0.8, shape=17),
@@ -94,10 +95,20 @@ mycolors2<-c(brewer.pal(8, "Paired")[c(8,7,2,1)])
 qPCR_plot<-function(gene){
   ggplot(data=long_qPCR_results[long_qPCR_results$gene%in%gene,], 
          aes(x=group, y=Ct))+
+    geom_boxplot(size=1.5)+
+    geom_beeswarm(color="black", size=5, alpha=0.8, shape=17)+
+    geom_signif(comparisons = list(c("F_HFD", "F_ND")), test = wilcox.test, textsize = 11,
+              size=1.5)+
+    geom_signif(comparisons = list(c("M_HFD", "M_ND")), test = wilcox.test, textsize = 11,
+              size=1.5)+
+    theme_Publication()+
+    theme(legend.position="none")+
+    scale_y_continuous(trans='log2', #log2 transformation of y-scale
+                       expand = expansion(mult = c(0, 0.15)))+  #Adds 10% of spacing on top of y-axis
     ggtitle(gene)+
-    labs(y=paste("Relative",gene, "Expression"), x=NULL)+
-    qPCR_style
+    labs(y=paste("Relative",gene, "Expression"), x=NULL)
 }
+?scale_y_continuous
 
 #Save the plot in a standardized format
 save_plot<-function(plot){
@@ -105,13 +116,12 @@ save_plot<-function(plot){
     
     filename=paste(plot,".tiff"),
     device="tiff",
-    width=12,
-    height=10,
+    width=10,
+    height=8,
     # units="mm",
     path="output/graphs/Figure_5",
     dpi = "retina")
 }
-
 
 #*#*#*#*#*#*#*#*#*#*#*#
 #Plots for figure 5####
@@ -125,13 +135,37 @@ ggplot(data=long_qPCR_results, aes(x=group, y=Ct, fill=group))+geom_boxplot(show
   scale_y_continuous(expand = expansion(mult = c(0, 0.20)),
                      trans="log2")+
   scale_fill_manual(values=c(mycolors2))+
-  theme_Publication()+labs(y= NULL, x=NULL)+ ggtitle("Expression data in No DEN animals")
+  theme_foundation(base_size=14, base_family="sans")+
+  theme(plot.title = element_text(face = "bold",
+                                  size = rel(1.2), hjust = 0.5, margin = margin(t=0,r=0,b=25,l=0)),
+        text = element_text(),
+        panel.background = element_rect(colour = NA),
+        plot.background = element_rect(colour = NA),
+        panel.border = element_rect(colour = NA),
+        axis.title = element_text(face = "bold",size = rel(1)),
+        axis.title.y = element_text(angle=90,vjust =2),
+        axis.title.x = element_text(vjust = -0.2),
+        axis.text.x  = element_text(), 
+        axis.line.x = element_line(colour="black"),
+        axis.line.y = element_line(colour="black"),
+        axis.ticks = element_line(),
+        panel.grid.major = element_line(colour="#f0f0f0"),
+        panel.grid.minor = element_blank(),
+        plot.margin=unit(c(5,5,5,5),"mm"),
+        strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
+        strip.text = element_text(face="bold"))+
+  labs(y= NULL, x=NULL)+ ggtitle("Complete quantitativ PCR expression data")
 
 #Create plots for the figure
-qPCR_plot("Ppara")
+qPCR_plot("Tlr4")
 qPCR_plot("Fgf21")
 
 
 #Execute the function to save the plot
-save_plot("Ppara")
+save_plot("Tlr4")
 
+df_results<-read.csv("output/df_results.csv")
+Fgf21_p_values<-df_results%>%filter(symbol%in%"Fgf21")%>%
+  pull(P.Value)
+
+pchisq((sum(log(Fgf21_p_values))*-2), df=length(Fgf21_p_values)*2, lower.tail=F)

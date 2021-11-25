@@ -4,7 +4,7 @@
 
 #loading necessary packages
 lapply(c("tidyverse", "RColorBrewer", "reshape", "data.table", "colorspace",
-         "ggbeeswarm"), require, character.only = TRUE)
+         "ggbeeswarm", "ggpubr"), require, character.only = TRUE)
 
 #Load colors
 mycolors_groups<-c(brewer.pal(8, "Paired")[c(8,7,2,1)])
@@ -52,7 +52,6 @@ boxplot_style<-list(geom_boxplot(size=1.5),
                         theme_Publication(),
                     theme(legend.position="none")
 )
-?geom_signif
 
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 #Import datafiles####
@@ -142,5 +141,21 @@ ggplot(data= no_DEN, aes(x = group, y = MT2_ratio_surface, fill=group))+
   labs(y= "log2 (Relative surface of steatosis [%])", x=NULL)+
   ggtitle("Steatosis")
 
-colnames(histo_Tihy)
-mean(no_DEN[no_DEN$group=="F_HFD","ALT_24w"])
+#Test for steatosis values with maximum value of the surface ratio
+
+histo_Tihy<-read.csv("data/No_DEN_Tihy2.csv")
+
+X<-histo_Tihy%>%group_by(cage, cage_ID, group, group2)%>%
+  dplyr::summarise(max_surfRatio=max(RatioSurfaceSurSurfaceTotale),
+                max_vacRatio=max(RatioCelluleSurVacuoles))
+
+ggplot(data= X, aes(x = group2, y = max_surfRatio, fill=group2))+
+  geom_boxplot(size=1.5)+
+  geom_beeswarm(color="black", size=5, alpha=0.8, shape=17)+
+  geom_signif(comparisons = list(c("HFD", "ND")), test = wilcox.test, textsize = 11,
+            size=1)+
+  scale_y_continuous(trans='log2')+
+  theme_Publication()+
+  theme(legend.position="none")+
+  labs(y= "log2 (Relative surface of steatosis [%])", x=NULL)+
+  ggtitle("Steatosis")
