@@ -50,6 +50,7 @@ ui <- fluidPage(
              Matthieu Tihy, Andrea Peloso, Graziano Oldani, Thomas Delmi, 
              Florence Slits, Quentin Gex, Laura Rubbia-Brandt, Nicolas Goossens, 
                      Stephanie Lacotte, Christian Toso")),
+               h4("Geneva University Hospitals & Geneva University Faculty of Medicine"),
                style='margin-bottom:30px;padding: 10px;'
         ),
         
@@ -72,7 +73,7 @@ ui <- fluidPage(
                                 selectInput(inputId = "GEOSET_sex", label = strong("Sex offspring"),
                                             choices = NULL, multiple=FALSE,
                                             selected = "all"),
-                                selectizeInput(inputId = "GEOSET_diet", label = strong("Diet mother"),
+                                selectizeInput(inputId = "GEOSET_diet", label = strong("Diet offspring"),
                                                choices = NULL, multiple=FALSE,
                                                selected = "all"),
                                 selectizeInput(inputId = "GEOSET_age", label = strong("Age offspring"),
@@ -91,7 +92,7 @@ ui <- fluidPage(
                      #Insertion of level of expression plot
                      fluidRow(style="margin-top:20px",
                               column(4,
-                                     h5("Description"),
+                                     h4(strong("Description")),
                                      p("The graph to the right displays the gene expression level of the 
                                      above selected gene in each individual dataset as percentile. Highly
                                        expressed genes are closer to 100%.")
@@ -104,7 +105,14 @@ ui <- fluidPage(
 
                      
                      #Insertion of the datatable
-                     fluidRow(column(12,
+                     fluidRow(column(4,
+                                            h4(strong("Description")),
+                                            p("The table to the right contains the summary result of the differential
+                                              gene expression anaylsis per condition analysed (GEOSET)
+                                              for the above selected gene.")
+                     ),
+                     
+                     column(8,
                                      dataTableOutput("table"),
                                      style='margin-top:20px;padding: 10px;'
                                      )
@@ -164,9 +172,10 @@ ui <- fluidPage(
             #TabPanel GEOSET description
             tabPanel(strong("GEOSET description"),
                      column(4,
-                                     h5("Description"),
-                                     p("Table with the characteristics of the included datasets
-                                       in this study")
+                            h4(strong("Description")),
+                            p("The table to the right contains all informations regarding
+                            the included datasets in this study with the corresponding
+                            references.")
                      ),
                      
                       column(8,
@@ -198,6 +207,9 @@ server <- function(input, output, session) {
     #Import of dataset and selection of appropriate variables
     #df_results <- read.csv("df_results.csv.gz")[,c(1,3:7, 9:10)];saveRDS(df_results,file="df_results.rds")
     df_results <- readRDS("df_results.rds")
+    
+    #Import description data table for tab of GEOSET description
+    GEOSET_descr_tab<-read.csv("description_GEOSET.csv")
         
     
     # Compute expression rank
@@ -215,14 +227,15 @@ server <- function(input, output, session) {
             GEOSET=unique(df_results$GEOSET),
             sex=c(c(rep("male",times=9), "female", "male", "male")),
             age=c("pre-natal",c(rep("adult",times=8)), "suckling", "suckling", "pre-natal"),
-            diet_mother=c(NA, "ND", c(rep("HFD",times=3)), c(rep(c("ND", "HFD"),times=2)), "ND", "ND", NA)
+            diet_offspring=c(NA, "Normal Diet", c(rep("High Fat Diet",times=3)), 
+                             c(rep(c("Normal Diet", "High Fat Diet"),times=2)), c(rep("Normal Diet",times=2)), NA)
 
         )
     
         row_all<-data.frame(
             GEOSET=unique(df_results$GEOSET), 
             sex=c(rep("all",times=12)), age=c(rep("all",times=12)), 
-            diet_mother=c(rep("all",times=12))
+            diet_offspring=c(rep("all",times=12))
         )
         
         GEOSET_descr<-rbind(row_all,GEOSET_descr)
@@ -231,7 +244,7 @@ server <- function(input, output, session) {
     #update select for forrest plot
     updateSelectInput(session, 'GEOSET_sex', choices=unique(GEOSET_descr$sex))
     
-    updateSelectizeInput(session, 'GEOSET_diet', choices=unique(GEOSET_descr$diet_mother), 
+    updateSelectizeInput(session, 'GEOSET_diet', choices=unique(GEOSET_descr$diet_offspring), 
                          server=TRUE)
     
     updateSelectizeInput(session, 'GEOSET_age', choices=unique(GEOSET_descr$age), server=TRUE)
@@ -254,7 +267,7 @@ server <- function(input, output, session) {
         #Select GEOSET's according to above input
         sex<-GEOSET_descr$GEOSET[GEOSET_descr$sex%in%input$GEOSET_sex]
         age<-GEOSET_descr$GEOSET[GEOSET_descr$age%in%input$GEOSET_age]
-        diet<-GEOSET_descr$GEOSET[GEOSET_descr$diet_mother%in%input$GEOSET_diet]
+        diet<-GEOSET_descr$GEOSET[GEOSET_descr$diet_offspring%in%input$GEOSET_diet]
         
         GEO_sel<-Reduce(intersect, list(sex,age,diet))
         
@@ -347,17 +360,7 @@ server <- function(input, output, session) {
     
     #Datatable with GEOSET description
     output$GEOSETtable <- renderDataTable({
-      GEOSET_description <- data.frame(
-        GEOSET=unique(df_results$GEOSET),
-        sex=c(c(rep("male",times=9), "female", "male", "male")),
-        age=c("pre-natal",c(rep("adult",times=8)), "suckling", "suckling", "pre-natal"),
-        diet_mother=c(NA, "ND", c(rep("HFD",times=3)), c(rep(c("ND", "HFD"),times=2)), 
-                         "ND", "ND", NA),
-        year_published=c("2019","2014","2014","2019","2019", "2019", "2019",
-                         "2014", "2014", "2013", "2013", "2014")
-      )
-    
-      GEOSET_description
+      GEOSET_descr_tab
     })
     
 }
