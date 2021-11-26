@@ -120,25 +120,6 @@ ui <- fluidPage(
                      
             ),
             
-            tabPanel(strong("Volcano Plot"),
-                     fluidRow(
-                         column(4,
-                                #Determines the input gene, with possible multiple selections
-                                selectizeInput("gene_selectionV","Gene of interest",
-                                               choices=NULL,multiple=TRUE),
-
-                                p("Enter the gene of interest in the field above. The black diamond
-                                indicates the relative position (logFC, p-value) of the selcted  genes in 
-                                regards to all other genes" )
-                         ),
-                         
-                         column(8,
-                                plotOutput("volcanoPlot",width = plotwidth, height=plotwidth)
-                         )
-                     ),
-      
-            ),
-            
             #TabPanel heatmap
             tabPanel(strong("Heatmap"),
                      #Layout of the row with the tile plot
@@ -153,18 +134,42 @@ ui <- fluidPage(
                             sliderInput(inputId = "nbTile", label = strong("Number of datasets"),
                                         min = 0, max=12, value=3),
                             
+                            sliderInput(inputId = "nbGenes", label = strong("Number of genes"),
+                                        min = 1, max=100, value=40),
+                            
                             p("You can select genes based on the above conditions:" ),
                             p(strong("p-value:"),"Maximal p-value for the gene to be included"),
                             p(strong("logFC:"),"Minimum logarithmic fold change for the gene to be included"),
                             p(strong("Number of datasets:"),
                               "Minimum number of conditions/datasets in which the above conditions
-                              need to be fulfilled for the gene to be included.")
+                              need to be fulfilled for the gene to be included."),
+                            p(strong("Number of genes to display:"),
+                              "Number of genes that are displayed in the heatmap.")
                             
                      ),
                      
                      column(8,
                             h4("Genes according to selection", align="center"),
                             plotOutput("tilePlot", width = plotwidth, height=plotwidth)
+                     ),
+                     
+            ),
+            
+            tabPanel(strong("Volcano Plot"),
+                     fluidRow(
+                       column(4,
+                              #Determines the input gene, with possible multiple selections
+                              selectizeInput("gene_selectionV","Gene of interest",
+                                             choices=NULL,multiple=TRUE),
+                              
+                              p("Enter the gene of interest in the field above. The black diamond
+                                indicates the relative position (logFC, p-value) of the selcted  genes in 
+                                regards to all other genes" )
+                       ),
+                       
+                       column(8,
+                              plotOutput("volcanoPlot",width = plotwidth, height=plotwidth)
+                       )
                      ),
                      
             ),
@@ -260,6 +265,7 @@ server <- function(input, output, session) {
     updateNumericInput(session, inputId = "pValTile")
     updateSliderInput(session, inputId = "logFCTile")
     updateSliderInput(session, inputId = "nbTile")
+    updateSliderInput(session, inputId = "nbGenes")
     
     #Create Forrest Plot
     output$forrestPlot <- renderPlot({
@@ -333,7 +339,7 @@ server <- function(input, output, session) {
         #Producedf with top 40 genes
         df_genes_tile<-df_results[df_results$symbol%in%genes_tiles,]
         df_genes_tile<-df_genes_tile[order(abs(df_genes_tile$logFC), decreasing=TRUE),]
-        genes_tile40<-unique(head(df_genes_tile, 45)[,2])
+        genes_tile40<-unique(head(df_genes_tile, input$nbGenes)[,2])
         df_tile40<-df_results[df_results$symbol%in%genes_tile40,]
         
         #convert high logFC (smaller or larger than 2) to 2 and select appropriate columns
