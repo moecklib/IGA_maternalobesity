@@ -145,6 +145,8 @@ top_DEG_annocleaned<-top_DEG_anno%>%dplyr::filter(pathway_wp!="NA")%>%
 reactome_genelist<-read.csv("output/reactome_pathways.csv.gz")%>%
   transmute(reactome_pw=str_remove(value, ".*:"), symbol=c(name))
 
+length(unique(reactome_genelist$value))
+
 #Create list of top deregulated pathways
 #top_dereg_pathways<-top_DEG%>%left_join(reactome_genelist, by=c("symbol"="symbol"))%>%
 #  group_by(reactome_pw)%>%summarise(count=n())%>%arrange(desc(count))
