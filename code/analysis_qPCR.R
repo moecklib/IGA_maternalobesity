@@ -3,7 +3,7 @@
 
 #loading necessary packages
 lapply(c("tidyverse", "RColorBrewer", "reshape", "data.table", "colorspace", "readxl", 
-         "ggpubr"), require, character.only = TRUE)
+         "ggpubr", "ggbeeswarm"), require, character.only = TRUE)
 
 
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
@@ -77,8 +77,6 @@ theme_Publication <- function(base_size=32, base_family="sans") {
     ))
 }
 
-?theme
-
 qPCR_style<-list(geom_boxplot(size=1.5),
                     geom_beeswarm(color="black", size=5, alpha=0.8, shape=17),
                     geom_signif(comparisons = list(c("F_HFD", "F_ND")), test = wilcox.test, textsize = 11,
@@ -108,7 +106,6 @@ qPCR_plot<-function(gene){
     ggtitle(gene)+
     labs(y=paste("Relative",gene, "Expression"), x=NULL)
 }
-?scale_y_continuous
 
 #Save the plot in a standardized format
 save_plot<-function(plot){
@@ -158,7 +155,7 @@ ggplot(data=long_qPCR_results, aes(x=group, y=Ct, fill=group))+geom_boxplot(show
 
 #Create plots for the figure
 qPCR_plot("Tlr4")
-qPCR_plot("Fgf21")
+qPCR_plot("Mttp")
 
 
 #Execute the function to save the plot

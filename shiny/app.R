@@ -42,6 +42,7 @@ theme_Publication <- function(base_size=18, base_family="sans") {
 plotwidth<-"700px"
 
 ui <- fluidPage(
+  tags$head(includeHTML(("google-analytics.html"))),
     
     fluidRow(
         column(8,

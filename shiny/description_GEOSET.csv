@@ -1,0 +1,13 @@
+Condition,GEO_accession,Tissue,Reference,Year_published,Offspring_diet,Samples_per_group,Sex,Age,Technique
+GSE40903_COvsOO,GSE40903,Liver,"Cannon et al., PLoS One, 2014",2014,High Fat Diet,9,Male,9 weeks,MicroArray
+GSE40903_CCvsOC,GSE40903,Liver,"Cannon et al., PLoS One, 2014",2014,Normal Diet,9,Male,9 weeks,MicroArray
+GSE134976_COvsOO,GSE134976,Liver,"Pantaleao et al, unpublished",2019,High Fat Diet,3,Not specified,12 weeks,RNA Seq
+GSE134976_CCvsOC,GSE134976,Liver,"Pantaleao et al, unpublished",2019,Normal Diet,3,Not specified,12 weeks,RNA Seq
+GSE123009_12w,GSE123009,Liver,"Rouschop et al., J Lipid Res, 2019",2019,High Fat Diet,7,Male,12 weeks,MicroArray
+GSE123009_28w,GSE123009,Liver,"Rouschop et al., J Lipid Res, 2019",2019,High Fat Diet,9,Male,28 weeks,MicroArray
+GSE44901_COvsOO,GSE44901,Liver,"Pruis et al., Acta Physiol, 2014",2014,High Fat Diet,5,Male,29 weeks,MicroArray
+GSE44901_CCvsOC,GSE44901,Liver,"Pruis et al., Acta Physiol, 2014",2014,Normal Diet,5,Male,29 weeks,MicroArray
+GSE46359,GSE46359,Liver,"Mischke et al., PLoS One, 2013",2013,Normal Diet,6,Female,2 weeks,MicroArray
+GSE46359,GSE46359,Liver,"Mischke et al., PLoS One, 2013",2013,Normal Diet,6,Male,2 weeks,MicroArray
+GSE62715,GSE62715,Liver,"Kamimae-Lanning et al., Mol Metab., 2014",2014,Not specified,6,Not specified,"Fetal, 15d",RNA Seq
+GSE133767,GSE133767,Blastocyst,"Hedegger et al., Int J Obes, 2019",2019,Not specified,4,Not specified,Blastocyst,MicroArray
