@@ -126,7 +126,7 @@ save_plot<-function(plot){
 
 #Expression data in facet plot to visualize all experiments together
 ggplot(data=long_qPCR_results, aes(x=group, y=Ct, fill=group))+geom_boxplot(show.legend = FALSE)+
-  facet_wrap(~gene, scales="free")+
+  facet_wrap(~gene, scales="free", ncol=4)+
   stat_compare_means(comparisons=list(c("M_HFD", "M_ND")),label="p.format", hide.ns = TRUE)+
   stat_compare_means(comparisons=list(c("F_HFD", "F_ND")),label="p.format", hide.ns = TRUE)+
   scale_y_continuous(expand = expansion(mult = c(0, 0.20)),
@@ -166,3 +166,5 @@ Fgf21_p_values<-df_results%>%filter(symbol%in%"Fgf21")%>%
   pull(P.Value)
 
 pchisq((sum(log(Fgf21_p_values))*-2), df=length(Fgf21_p_values)*2, lower.tail=F)
+
+median_qPCR<-long_qPCR_results[,c(5,7,8)]%>%group_by(group, gene)%>%summarise(median=median(Ct), mean=mean(Ct))
