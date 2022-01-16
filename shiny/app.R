@@ -256,10 +256,11 @@ server <- function(input, output, session) {
     updateSelectizeInput(session, 'GEOSET_age', choices=unique(GEOSET_descr$age), server=TRUE)
     
     updateSelectizeInput(session, 'gene_selection', choices=unique(df_results$symbol),
-                         selected = "Lcn2", server=TRUE)
+                         selected = "Lcn2", server=TRUE, options=list(maxItems=1))
     
+    #Gene Selection for Volcano Plot
     updateSelectizeInput(session, 'gene_selectionV', choices=unique(df_results$symbol),
-                         selected = "Fgf21", server=TRUE)
+                         selected = "Fgf21", server=TRUE,options=list(maxItems=1))
     
     
     #update inputs for the heatplot
@@ -350,7 +351,7 @@ server <- function(input, output, session) {
         
         #Produce the plot to display
         ggplot(df_tile40, aes(x = GEOSET, y = reorder(symbol, logFC), fill=logFC)) +   #reorder variables according to values
-            scale_fill_viridis_c()+
+          scale_fill_gradient2(low="#2166ac", mid="#f7f7f7", high="#b2182b", limits=c(-2,2))+
             labs(x="GEO Expression Set", y="Gene Symbol", fill="logFC")+
             geom_tile(colour="white",size=0.1)+
             theme_Publication()
