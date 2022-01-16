@@ -34,6 +34,7 @@ qPCR_results<-qPCR_results_pre%>%left_join(sampleKey1)%>%
 #Create annotated outputfile, include Fgf21 manually and reread the file
 #write.csv(qPCR_results, file="data/qPCR_analysis/20211119_qPCR_ResAnnotated.csv")
 qPCR_results<-read.csv(file="data/qPCR_analysis/20211119_qPCR_ResAnnotated.csv")
+qPCR_results<-read.csv(file="data/qPCR_analysis/20220116_qPCR_ResAnnotated.csv")
 
 #Pivot longer to be able to display results in a facet wrap
 long_qPCR_results<-qPCR_results%>%mutate(sample=as.character(sample), cage_ID=as.character(cage_ID))%>%
@@ -166,3 +167,5 @@ Fgf21_p_values<-df_results%>%filter(symbol%in%"Fgf21")%>%
   pull(P.Value)
 
 pchisq((sum(log(Fgf21_p_values))*-2), df=length(Fgf21_p_values)*2, lower.tail=F)
+
+mean_Ct<-long_qPCR_results%>%group_by(group, gene)%>%summarize(mean=mean(Ct))
