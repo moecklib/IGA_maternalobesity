@@ -6,6 +6,7 @@
 lapply(c("tidyverse", "RColorBrewer", "reshape", "data.table", "colorspace",
          "ggbeeswarm", "ggpubr"), require, character.only = TRUE)
 
+
 #Load colors
 mycolors_groups<-c(brewer.pal(8, "Paired")[c(8,7,2,1)])
 
@@ -32,7 +33,7 @@ theme_Publication <- function(base_size=32, base_family="sans") {
             legend.key = element_rect(colour = NA),
             legend.position = "right",
             legend.direction = "vertical",
-            legend.box = "vetical",
+            legend.box = "vertical",
             legend.key.size= unit(0.5, "cm"),
             #legend.margin = unit(0, "cm"),
             legend.title = element_text(face="italic"),
@@ -58,11 +59,20 @@ boxplot_style<-list(geom_boxplot(size=1.5),
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 
 histo_Tihy<-read.csv("data/No_DEN_Tihy2.csv")
+no_DEN<-read.csv("data/No_DEN_1.csv")
+weight_offspring_pre<-read.csv("data/weight_offspring_NoDEN.csv")
+
+#Create long format file for the weight plot
+weight_offspring<-weight_offspring_pre%>%
+  pivot_longer(where(is.numeric), names_to = "week", values_to = "weight")%>%
+  mutate(week=as.numeric(gsub(".*?([0-9]+).*", "\\1", week)))
 
 #*#*#*#*#*#*#*#*#
 #Create plots####
 #*#*#*#*#*#*#*#*#
 
+#Boxplot graph with all 40 timepoints four groups per timepoint. 
+#Not used for the final figure because to busy and lacking M-ND animals for the later timepoints
 ggplot(data=weight_offspring, aes(x=group, y=weight, fill=group))+
   geom_boxplot()+
   geom_beeswarm(color="black", size=1, alpha=0.6)+
@@ -74,6 +84,8 @@ ggplot(data=weight_offspring, aes(x=group, y=weight, fill=group))+
   theme_Publication()+
   ggtitle("Weight curve cohousing offspring")
 
+#Weight curve graph for the first 21 weeks.
+#Not used since esthetically less pleasing and lacking M-ND animals for the later timepoints
 weight_offspring%>%dplyr::filter(week<21)%>%
 ggplot(aes(x=week, y=weight, fill=group, color=group))+
   #geom_beeswarm(size=1, alpha=0.6)+
@@ -83,19 +95,24 @@ ggplot(aes(x=week, y=weight, fill=group, color=group))+
   labs(y= "Weight [g]", x="Week after weaning")+
   theme_Publication()
 
-#Weight plot
+#Weight plot final with legend and x-axis labels
 weight_offspring%>%dplyr::filter(week%in%c(4,18))%>%
   ggplot(aes(x=group, y=weight, fill=group))+
   geom_boxplot(size=1.5)+
   geom_beeswarm(color="black", size=5, alpha=0.8, shape=17)+
   facet_wrap(~week, nrow=1, switch = "x")+
-  geom_signif(comparisons = list(c("F_HFD", "F_ND")), test = wilcox.test, textsize = 9)+
-  geom_signif(comparisons = list(c("M_HFD", "M_ND")), test = wilcox.test, textsize = 9)+
+  geom_signif(comparisons = list(c("F_HFD", "F_ND")), test = wilcox.test, textsize = 9,
+              size=1)+
+  geom_signif(comparisons = list(c("M_HFD", "M_ND")), test = wilcox.test, textsize = 9,
+              size=1)+
   scale_fill_manual(values=mycolors_groups)+
   labs(y= "Weight [g]", x="Week of life")+
   theme_Publication()+
-  theme(legend.position="none",axis.text.x=element_blank(), axis.ticks.x=element_blank())+
-  ggtitle("Weight 4 & 18 weeks")
+  theme(legend.position="right", axis.text.x = element_text(angle = 45, vjust = 0.8), 
+        axis.ticks.x=element_blank())+
+  guides(shape=FALSE)+
+  ggtitle("Weight 4 & 18 weeks")+
+  scale_y_continuous(limits=c(12, 34), expand = c(0.1, 0))    #Make the p-value labels visible
 
 #ALT plot
 ggplot(data= no_DEN, aes(x = group, y = ALT_24w, fill=group))+
@@ -115,7 +132,7 @@ ggplot(data= no_DEN, aes(x = group, y = OGTT_24w, fill=group))+
 #NAFLD Barplots
 ggplot(data= no_DEN, aes(x = group, fill=Bedossa_et_al.))+
   geom_bar(position="fill", color="white")+
-  geom_text(data = no_DEN %>% group_by(group, Bedossa_et_al.) %>% tally() %>%
+  geom_text(data = no_DEN %>% group_by(group, Bedossa_et_al.) %>% tally() %>% #Add labels to barplot
               mutate(p = n / sum(n)) %>% ungroup(),
             aes(y = p, label = scales::percent(p)),
             position = position_stack(vjust = 0.5),
@@ -124,32 +141,40 @@ ggplot(data= no_DEN, aes(x = group, fill=Bedossa_et_al.))+
   labs(y= "Proportion Histology", x=NULL)+
   scale_fill_manual(values = c("No NAFLD" = "#cccccc", "NAFLD" = "#fd8f24", "NASH" = "#c03728"))+
   ggtitle("Proportion of NAFLD or NASH")+
-  theme_Publication()
+  theme_Publication()+
+  theme(legend.title = element_blank())
 
 
 #Fibrosis Boxplot
 ggplot(data= no_DEN, aes(x = group, y = rel_fibrosis_Qpath, fill=group))+
   boxplot_style+
-  scale_y_continuous(trans='log2')+
-  labs(y= "Relative surface of fibrosis [%]", x=NULL)+
+  scale_y_continuous(trans='log2',
+                     expand = expansion(mult = c(0, 0.15)))+
+  labs(y= "Surface fibrosis [%]", x=NULL)+
   ggtitle("Fibrosis")
 
 #Steatosis Boxplot
 ggplot(data= no_DEN, aes(x = group, y = MT2_ratio_surface, fill=group))+
   boxplot_style+
-  scale_y_continuous(trans='log2')+
-  labs(y= "log2 (Relative surface of steatosis [%])", x=NULL)+
+  scale_y_continuous(trans='log2', #log2 transformation of y-scale
+                     expand = expansion(mult = c(0, 0.15)))+ #Add additional space
+  labs(y= "Surface steatosis [%]", x=NULL)+
   ggtitle("Steatosis")
 
-#Test for steatosis values with maximum value of the surface ratio
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
+#Test for steatosis calculation with maximum value of the surface ratio####
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 
+#Import data file from Mathieu
 histo_Tihy<-read.csv("data/No_DEN_Tihy2.csv")
 
-X<-histo_Tihy%>%group_by(cage, cage_ID, group, group2)%>%
+#Extract higher Ratio Surface of the two measurements
+histo_tihy_max<-histo_Tihy%>%group_by(cage, cage_ID, group, group2)%>%
   dplyr::summarise(max_surfRatio=max(RatioSurfaceSurSurfaceTotale),
                 max_vacRatio=max(RatioCelluleSurVacuoles))
 
-ggplot(data= X, aes(x = group2, y = max_surfRatio, fill=group2))+
+#Display the corresponding graph
+ggplot(data= histo_tihy_max, aes(x = group2, y = max_surfRatio, fill=group2))+
   geom_boxplot(size=1.5)+
   geom_beeswarm(color="black", size=5, alpha=0.8, shape=17)+
   geom_signif(comparisons = list(c("HFD", "ND")), test = wilcox.test, textsize = 11,

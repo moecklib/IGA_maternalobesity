@@ -10,11 +10,11 @@ lapply(c("tidyverse", "RColorBrewer", "reshape", "data.table", "colorspace", "re
 #Raw results import and annotation####
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*
 
-#Data file Impor, qPCR already analysed by the macro Excel document of the platform
+#Data file Import, qPCR already analysed by the macro Excel document of the platform
 qPCR_results_pre<-read.csv("data/qPCR_analysis/20211119_qPCR_RawResBefIntNorm.csv")
 
-#Import of annotatation file 1 (cDNA list from Stephanie Lacotte),
-#Cage number conlicts with the sampleKey2 file resolved manually
+#Import of annotation file 1 (cDNA list from Stephanie Lacotte),
+#Cage number conflicts with the sampleKey2 file resolved manually
 sampleKey1<-read.csv("data/qPCR_analysis/20211119_qPCR_sampleKey1.csv")%>%
   mutate(cage_ID=str_extract(Cage,"\\-.*"))%>%
   mutate(cage_ID=str_extract(cage_ID,"[:digit:]"))%>%
@@ -34,7 +34,9 @@ qPCR_results<-qPCR_results_pre%>%left_join(sampleKey1)%>%
 #Create annotated outputfile, include Fgf21 manually and reread the file
 #write.csv(qPCR_results, file="data/qPCR_analysis/20211119_qPCR_ResAnnotated.csv")
 qPCR_results<-read.csv(file="data/qPCR_analysis/20211119_qPCR_ResAnnotated.csv")
-qPCR_results<-read.csv(file="data/qPCR_analysis/20220116_qPCR_ResAnnotated.csv")
+
+#New file with additional qPCR data for revision (Mttp, Mertk, Slc2a2, Srebf1)
+qPCR_results<-read.csv(file="data/qPCR_analysis/20220116_qPCR_ResAnnotated.csv") 
 
 #Pivot longer to be able to display results in a facet wrap
 long_qPCR_results<-qPCR_results%>%mutate(sample=as.character(sample), cage_ID=as.character(cage_ID))%>%
@@ -46,6 +48,7 @@ long_qPCR_results<-qPCR_results%>%mutate(sample=as.character(sample), cage_ID=as
 #Plot structure & functions####
 #*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 
+#Import theme publication
 theme_Publication <- function(base_size=32, base_family="sans") {
   library(grid)
   library(ggthemes)
@@ -78,6 +81,7 @@ theme_Publication <- function(base_size=32, base_family="sans") {
     ))
 }
 
+#Define a style for the display of qPCR data
 qPCR_style<-list(geom_boxplot(size=1.5),
                     geom_beeswarm(color="black", size=5, alpha=0.8, shape=17),
                     geom_signif(comparisons = list(c("F_HFD", "F_ND")), test = wilcox.test, textsize = 11,
@@ -88,6 +92,7 @@ qPCR_style<-list(geom_boxplot(size=1.5),
                     theme(legend.position="none")
 )
 
+#Define previously used colors
 mycolors2<-c(brewer.pal(8, "Paired")[c(8,7,2,1)])
 
 #Function to create qPCR plots
@@ -111,7 +116,6 @@ qPCR_plot<-function(gene){
 #Save the plot in a standardized format
 save_plot<-function(plot){
   ggsave(
-    
     filename=paste(plot,".tiff"),
     device="tiff",
     width=10,
@@ -121,11 +125,11 @@ save_plot<-function(plot){
     dpi = "retina")
 }
 
-#*#*#*#*#*#*#*#*#*#*#*#
-#Plots for figure 5####
-#*#*#*#*#*#*#*#*#*#*#*#
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
+#Plots for figure S3 (All qPCR results combined####
+#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#*#
 
-#Expression data in facet plot to visualize all experiments together
+#Expression data in facet plot to visualize all qPCR results together (23 genes)
 ggplot(data=long_qPCR_results, aes(x=group, y=Ct, fill=group))+geom_boxplot(show.legend = FALSE)+
   facet_wrap(~gene, scales="free", ncol=4)+
   stat_compare_means(comparisons=list(c("M_HFD", "M_ND")),label="p.format", hide.ns = TRUE)+
@@ -154,22 +158,22 @@ ggplot(data=long_qPCR_results, aes(x=group, y=Ct, fill=group))+geom_boxplot(show
         strip.text = element_text(face="bold"))+
   labs(y= NULL, x=NULL)+ ggtitle("Complete quantitativ PCR expression data")
 
+#*#*#*#*#*#*#*#*#*#*#*#
+#Plots for figure 5####
+#*#*#*#*#*#*#*#*#*#*#*#
+
 #Create plots for the figure
 qPCR_plot("Tlr4")
 qPCR_plot("Mttp")
+qPCR_plot("Mertk")
 
 
 #Execute the function to save the plot
 save_plot("Tlr4")
 
-df_results<-read.csv("output/df_results.csv")
-Fgf21_p_values<-df_results%>%filter(symbol%in%"Fgf21")%>%
-  pull(P.Value)
+#Create a new file with median and mean expression values per group
+median_qPCR<-long_qPCR_results[,c(5,7,8)]%>%group_by(group, gene)%>%
+  summarise(median=median(Ct), mean=mean(Ct))
 
-pchisq((sum(log(Fgf21_p_values))*-2), df=length(Fgf21_p_values)*2, lower.tail=F)
-
-<<<<<<< HEAD
-median_qPCR<-long_qPCR_results[,c(5,7,8)]%>%group_by(group, gene)%>%summarise(median=median(Ct), mean=mean(Ct))
-=======
-mean_Ct<-long_qPCR_results%>%group_by(group, gene)%>%summarize(mean=mean(Ct))
->>>>>>> 7af38d6bac908288d8599f3f0538d04d0fe0e40c
+#Filter based on a specific gene
+median_qPCR%>%filter(gene=="Fgf21")

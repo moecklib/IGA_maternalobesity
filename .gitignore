@@ -5,3 +5,7 @@
 .DS_Store
 doc
 *.nb.html
+
+# Tagged Image File Format in output folder
+*.tiff
+*.tif
